@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "gemini-image-gen": {
+      "command": "node",
+      "args": ["./mcp-server/build/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
+        "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}"
+      }
+    }
+  }
+}

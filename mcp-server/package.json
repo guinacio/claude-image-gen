@@ -1,0 +1,30 @@
+{
+  "name": "media-pipeline-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for media asset processing",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "media-pipeline": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "files": [
+    "build"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Florianópolis - The Magic Island</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ocean-deep: #0A3D4C;
+            --ocean-mid: #156B7A;
+            --sunset-coral: #E8634B;
+            --sunset-gold: #F7B538;
+            --sand-warm: #F5E6D3;
+            --sand-light: #FAF6F1;
+            --forest-green: #1D4A3A;
+            --foam-white: #FFFFFF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            background: var(--ocean-deep);
+        }
+
+        .slide-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Slide 1: Title */
+        .slide-1 {
+            background: linear-gradient(135deg, var(--ocean-deep) 0%, var(--ocean-mid) 50%, var(--sunset-coral) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .slide-1 .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.4;
+        }
+
+        .slide-1::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(10, 61, 76, 0.7) 0%, rgba(21, 107, 122, 0.5) 50%, rgba(232, 99, 75, 0.4) 100%);
+        }
+
+        .slide-1 .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .slide-1 .location-tag {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--sunset-gold);
+            margin-bottom: 2rem;
+        }
+
+        .slide-1 h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(4rem, 12vw, 10rem);
+            font-weight: 700;
+            color: var(--foam-white);
+            line-height: 0.9;
+            letter-spacing: -0.02em;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-1 .tagline {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 400;
+            font-style: italic;
+            color: var(--sand-warm);
+            margin-top: 1.5rem;
+        }
+
+        .slide-1 .coordinates {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 3rem;
+        }
+
+        /* Slide 2: Beaches */
+        .slide-2 {
+            display: flex;
+            align-items: stretch;
+            background: var(--sand-light);
+        }
+
+        .slide-2 .image-section {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-2 .image-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .slide-2 .image-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100px;
+            background: linear-gradient(to left, var(--sand-light), transparent);
+        }
+
+        .slide-2 .content-section {
+            flex: 1;
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .slide-2 .section-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--ocean-mid);
+            opacity: 0.15;
+            line-height: 1;
+            margin-bottom: -1rem;
+        }
+
+        .slide-2 h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            font-weight: 700;
+            color: var(--ocean-deep);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .slide-2 h2 span {
+            color: var(--sunset-coral);
+            font-style: italic;
+        }
+
+        .slide-2 .intro-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--ocean-deep);
+            opacity: 0.8;
+            max-width: 500px;
+            margin-bottom: 2rem;
+        }
+
+        .beach-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .beach-card {
+            background: var(--foam-white);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            box-shadow: 0 10px 40px rgba(10, 61, 76, 0.08);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .beach-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--ocean-mid), var(--sunset-coral));
+        }
+
+        .beach-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 50px rgba(10, 61, 76, 0.15);
+        }
+
+        .beach-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .beach-card h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--ocean-deep);
+            margin-bottom: 0.4rem;
+        }
+
+        .beach-card p {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--ocean-deep);
+            opacity: 0.7;
+        }
+
+        /* Slide 3: Culture */
+        .slide-3 {
+            display: flex;
+            align-items: stretch;
+            background: var(--ocean-deep);
+        }
+
+        .slide-3 .content-section {
+            flex: 1.2;
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .slide-3 .image-section {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-3 .image-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .slide-3 .image-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 100px;
+            background: linear-gradient(to right, var(--ocean-deep), transparent);
+            z-index: 2;
+        }
+
+        .slide-3 .section-tag {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--sunset-gold);
+            margin-bottom: 1rem;
+        }
+
+        .slide-3 h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            font-weight: 700;
+            color: var(--foam-white);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .slide-3 h2 span {
+            color: var(--sunset-coral);
+        }
+
+        .slide-3 .description {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--sand-warm);
+            opacity: 0.85;
+            max-width: 550px;
+            margin-bottom: 2rem;
+        }
+
+        .experience-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-bottom: 2rem;
+        }
+
+        .experience-tag {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            color: var(--foam-white);
+            transition: all 0.3s ease;
+        }
+
+        .experience-tag:hover {
+            background: var(--sunset-coral);
+            border-color: var(--sunset-coral);
+        }
+
+        .cuisine-showcase {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .cuisine-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.4s ease;
+        }
+
+        .cuisine-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(10px);
+        }
+
+        .cuisine-card .emoji {
+            font-size: 2rem;
+        }
+
+        .cuisine-card .info h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--foam-white);
+            margin-bottom: 0.15rem;
+        }
+
+        .cuisine-card .info p {
+            font-size: 0.8rem;
+            color: var(--sand-warm);
+            opacity: 0.7;
+        }
+
+        /* Slide 4: Nature & Adventure */
+        .slide-4 {
+            display: flex;
+            align-items: stretch;
+            background: var(--forest-green);
+        }
+
+        .slide-4 .image-section {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-4 .image-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .slide-4 .image-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100px;
+            background: linear-gradient(to left, var(--forest-green), transparent);
+        }
+
+        .slide-4 .content-section {
+            flex: 1;
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .slide-4 .section-tag {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--sunset-gold);
+            margin-bottom: 1rem;
+        }
+
+        .slide-4 h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2rem, 4vw, 3.5rem);
+            font-weight: 700;
+            color: var(--foam-white);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .slide-4 h2 span {
+            color: var(--sunset-gold);
+        }
+
+        .slide-4 .description {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--sand-warm);
+            opacity: 0.85;
+            max-width: 500px;
+            margin-bottom: 2rem;
+        }
+
+        .adventure-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .adventure-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            transition: all 0.4s ease;
+        }
+
+        .adventure-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .adventure-card .icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .adventure-card h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--foam-white);
+            margin-bottom: 0.4rem;
+        }
+
+        .adventure-card p {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: var(--sand-warm);
+            opacity: 0.75;
+        }
+
+        /* Slide 5: Closing */
+        .slide-5 {
+            background: linear-gradient(135deg, var(--ocean-deep) 0%, var(--sunset-coral) 50%, var(--sunset-gold) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide-5 .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.5;
+        }
+
+        .slide-5::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(10, 61, 76, 0.6) 0%, rgba(232, 99, 75, 0.4) 50%, rgba(247, 181, 56, 0.3) 100%);
+        }
+
+        .slide-5 .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 2rem;
+            max-width: 800px;
+        }
+
+        .slide-5 .closing-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 400;
+            font-style: italic;
+            color: var(--sand-warm);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .slide-5 h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(3rem, 10vw, 7rem);
+            font-weight: 700;
+            color: var(--foam-white);
+            line-height: 0.95;
+            letter-spacing: -0.02em;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        .slide-5 .cta-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .slide-5 .cta-button {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: var(--foam-white);
+            color: var(--ocean-deep);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-decoration: none;
+            border-radius: 3rem;
+            transition: all 0.4s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide-5 .cta-button:hover {
+            background: var(--sunset-gold);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-5 .hashtag {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Responsive for new slides */
+        @media (max-width: 900px) {
+            .slide-4 {
+                flex-direction: column;
+            }
+
+            .slide-4 .image-section {
+                height: 40vh;
+                flex: none;
+            }
+
+            .slide-4 .content-section {
+                padding: 2rem;
+            }
+
+            .slide-4 .image-section::after {
+                width: 100%;
+                height: 50px;
+                top: auto;
+                right: auto;
+                bottom: 0;
+                background: linear-gradient(to top, var(--forest-green), transparent);
+            }
+
+            .adventure-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Navigation */
+        .nav-dots {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .nav-dot.active {
+            background: var(--sunset-coral);
+            border-color: var(--foam-white);
+            transform: scale(1.2);
+        }
+
+        .nav-arrows {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .nav-arrow {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-arrow:hover {
+            background: var(--sunset-coral);
+            border-color: var(--sunset-coral);
+            transform: scale(1.1);
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.6);
+            z-index: 100;
+        }
+
+        .slide-counter .current {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--foam-white);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .slide-2, .slide-3 {
+                flex-direction: column;
+            }
+
+            .slide-2 .image-section,
+            .slide-3 .image-section {
+                height: 40vh;
+                flex: none;
+            }
+
+            .slide-2 .content-section,
+            .slide-3 .content-section {
+                padding: 2rem;
+            }
+
+            .slide-2 .image-section::after {
+                width: 100%;
+                height: 50px;
+                top: auto;
+                right: auto;
+                bottom: 0;
+                background: linear-gradient(to top, var(--sand-light), transparent);
+            }
+
+            .slide-3 .image-section::before {
+                width: 100%;
+                height: 50px;
+                top: 0;
+                bottom: auto;
+                background: linear-gradient(to bottom, var(--ocean-deep), transparent);
+            }
+
+            .beach-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-dots {
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <!-- Slide 1: Title -->
+        <div class="slide slide-1 active" data-slide="1">
+            <img src="img-floripa-hero.png" alt="Florianópolis aerial view" class="bg-image">
+            <div class="content">
+                <p class="location-tag">Santa Catarina, Brazil</p>
+                <h1>Florianópolis</h1>
+                <p class="tagline">The Magic Island</p>
+                <p class="coordinates">27.5954° S, 48.5480° W</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Beaches -->
+        <div class="slide slide-2" data-slide="2">
+            <div class="image-section">
+                <img src="img-floripa-beaches.png" alt="Beaches of Florianópolis">
+            </div>
+            <div class="content-section">
+                <span class="section-number">01</span>
+                <h2>42 Beaches of <span>Paradise</span></h2>
+                <p class="intro-text">From the wild surf of Joaquina to the tranquil waters of Lagoa da Conceição, Florianópolis offers a beach for every soul.</p>
+                <div class="beach-cards">
+                    <div class="beach-card">
+                        <div class="icon">🏄</div>
+                        <h3>Praia da Joaquina</h3>
+                        <p>World-famous surf destination with massive dunes.</p>
+                    </div>
+                    <div class="beach-card">
+                        <div class="icon">🐚</div>
+                        <h3>Praia do Campeche</h3>
+                        <p>Pristine island views and calm waters.</p>
+                    </div>
+                    <div class="beach-card">
+                        <div class="icon">🌅</div>
+                        <h3>Lagoinha do Leste</h3>
+                        <p>Hidden gem accessible only by trail.</p>
+                    </div>
+                    <div class="beach-card">
+                        <div class="icon">🌊</div>
+                        <h3>Lagoa da Conceição</h3>
+                        <p>Stunning lagoon with vibrant nightlife.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Culture -->
+        <div class="slide slide-3" data-slide="3">
+            <div class="content-section">
+                <span class="section-tag">Culture & Experiences</span>
+                <h2>Where Azorean Heritage Meets <span>Brazilian Soul</span></h2>
+                <p class="description">Discover the unique blend of Portuguese Azorean traditions, indigenous culture, and modern Brazilian vibrancy.</p>
+                <div class="experience-list">
+                    <span class="experience-tag">Boi de Mamão Festival</span>
+                    <span class="experience-tag">Colonial Centro</span>
+                    <span class="experience-tag">Ponte Hercílio Luz</span>
+                    <span class="experience-tag">Mercado Público</span>
+                    <span class="experience-tag">Artisan Lace</span>
+                    <span class="experience-tag">Forró Dancing</span>
+                </div>
+                <div class="cuisine-showcase">
+                    <div class="cuisine-card">
+                        <div class="emoji">🦪</div>
+                        <div class="info">
+                            <h4>Fresh Oysters</h4>
+                            <p>Brazil's largest oyster producer</p>
+                        </div>
+                    </div>
+                    <div class="cuisine-card">
+                        <div class="emoji">🦐</div>
+                        <div class="info">
+                            <h4>Sequência de Camarão</h4>
+                            <p>All-you-can-eat shrimp feast</p>
+                        </div>
+                    </div>
+                    <div class="cuisine-card">
+                        <div class="emoji">🥘</div>
+                        <div class="info">
+                            <h4>Caldinho de Peixe</h4>
+                            <p>Traditional Azorean fish stew</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="image-section">
+                <img src="img-floripa-culture.png" alt="Culture of Florianópolis">
+            </div>
+        </div>
+
+        <!-- Slide 4: Nature & Adventure -->
+        <div class="slide slide-4" data-slide="4">
+            <div class="image-section">
+                <img src="img-floripa-nature.png" alt="Nature and Adventure in Florianópolis">
+            </div>
+            <div class="content-section">
+                <span class="section-tag">Nature & Adventure</span>
+                <h2>Untamed Beauty <span>Awaits</span></h2>
+                <p class="description">From Atlantic rainforest trails to paragliding over pristine coastlines, Florianópolis is an adventurer's paradise.</p>
+                <div class="adventure-grid">
+                    <div class="adventure-card">
+                        <div class="icon">🪂</div>
+                        <h3>Paragliding</h3>
+                        <p>Soar above Praia Mole with breathtaking coastal views.</p>
+                    </div>
+                    <div class="adventure-card">
+                        <div class="icon">🥾</div>
+                        <h3>Trilha da Lagoinha</h3>
+                        <p>Trek through lush forest to a hidden beach paradise.</p>
+                    </div>
+                    <div class="adventure-card">
+                        <div class="icon">🛶</div>
+                        <h3>SUP & Kayaking</h3>
+                        <p>Explore mangroves and crystal-clear lagoons.</p>
+                    </div>
+                    <div class="adventure-card">
+                        <div class="icon">🐢</div>
+                        <h3>Projeto Tamar</h3>
+                        <p>Sea turtle conservation center at Barra da Lagoa.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Closing -->
+        <div class="slide slide-5" data-slide="5">
+            <img src="img-floripa-closing.png" alt="Sunset in Florianópolis" class="bg-image">
+            <div class="content">
+                <p class="closing-text">"A ilha da magia te espera"</p>
+                <h2>Até Logo,<br>Floripa</h2>
+                <div class="cta-container">
+                    <a href="#" class="cta-button">Start Planning Your Trip</a>
+                    <span class="hashtag">#VisitFlorianopolis</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-dots">
+        <div class="nav-dot active" data-target="1"></div>
+        <div class="nav-dot" data-target="2"></div>
+        <div class="nav-dot" data-target="3"></div>
+        <div class="nav-dot" data-target="4"></div>
+        <div class="nav-dot" data-target="5"></div>
+    </div>
+
+    <div class="nav-arrows">
+        <button class="nav-arrow prev">&#8592;</button>
+        <button class="nav-arrow next">&#8594;</button>
+    </div>
+
+    <div class="slide-counter">
+        <span class="current">01</span> / 05
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.nav-dot');
+        const prevBtn = document.querySelector('.prev');
+        const nextBtn = document.querySelector('.next');
+        const counter = document.querySelector('.slide-counter .current');
+        let currentSlide = 1;
+        const totalSlides = 5;
+
+        function goToSlide(n) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+
+            currentSlide = n;
+            if (currentSlide > totalSlides) currentSlide = 1;
+            if (currentSlide < 1) currentSlide = totalSlides;
+
+            document.querySelector('[data-slide="' + currentSlide + '"]').classList.add('active');
+            document.querySelector('[data-target="' + currentSlide + '"]').classList.add('active');
+            counter.textContent = String(currentSlide).padStart(2, '0');
+        }
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', function() {
+                goToSlide(parseInt(this.dataset.target));
+            });
+        });
+
+        prevBtn.addEventListener('click', function() { goToSlide(currentSlide - 1); });
+        nextBtn.addEventListener('click', function() { goToSlide(currentSlide + 1); });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                goToSlide(currentSlide + 1);
+            }
+            if (e.key === 'ArrowLeft') {
+                goToSlide(currentSlide - 1);
+            }
+        });
+
+        let touchStartX = 0;
+        document.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        document.addEventListener('touchend', function(e) {
+            const touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 50) goToSlide(currentSlide + 1);
+            if (touchEndX - touchStartX > 50) goToSlide(currentSlide - 1);
+        });
+    </script>
+</body>
+</html>

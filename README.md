@@ -23,7 +23,7 @@ The easiest way to install is using the pre-built extension:
 
 1. Download `media-pipeline.mcpb` from [Releases](https://github.com/guinacio/claude-image-gen/releases)
 2. Open Claude Desktop
-3. Go to **Settings** → **Extensions**
+3. Go to **Settings** → **Extensions** → **Advanced settings**
 4. Click **Install Extension** and select the `.mcpb` file
 5. Enter your Gemini API key when prompted
 

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b35"/>
+      <stop offset="100%" style="stop-color:#f7931e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff7ed"/>
+      <stop offset="100%" style="stop-color:#ffedd5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#bg)"/>
+
+  <!-- Abstract flowing shapes - modern pipeline/flow concept -->
+  <path d="M128 320 Q180 280 220 300 T320 280 T400 320"
+        stroke="white" stroke-width="24" stroke-linecap="round" fill="none" opacity="0.3"/>
+  <path d="M112 256 Q180 200 256 220 T400 200"
+        stroke="white" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M128 192 Q200 140 280 160 T384 140"
+        stroke="white" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.25"/>
+
+  <!-- Central icon: stylized sparkle/creation symbol -->
+  <g transform="translate(256, 256)">
+    <!-- Main diamond -->
+    <rect x="-40" y="-40" width="80" height="80" rx="12"
+          transform="rotate(45)" fill="white"/>
+    <!-- Inner glow -->
+    <rect x="-24" y="-24" width="48" height="48" rx="8"
+          transform="rotate(45)" fill="url(#bg)" opacity="0.6"/>
+  </g>
+
+  <!-- Floating dots -->
+  <circle cx="140" cy="140" r="16" fill="white" opacity="0.8"/>
+  <circle cx="380" cy="160" r="12" fill="white" opacity="0.6"/>
+  <circle cx="360" cy="360" r="14" fill="white" opacity="0.7"/>
+  <circle cx="160" cy="380" r="10" fill="white" opacity="0.5"/>
+</svg>

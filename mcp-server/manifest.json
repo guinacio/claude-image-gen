@@ -1,0 +1,56 @@
+{
+  "manifest_version": "0.2",
+  "name": "media-pipeline",
+  "display_name": "Media Pipeline - Gemini Image Generation",
+  "version": "1.0.0",
+  "icon": "icon.png",
+  "description": "Generate AI images using Google Gemini. Create hero images, thumbnails, and visual content from text prompts.",
+  "long_description": "A media asset generation server powered by Google Gemini AI. Supports multiple aspect ratios (1:1, 16:9, 9:16, etc.) and models for quality vs speed trade-offs. Images are saved to disk with file paths returned for easy integration into websites, presentations, and applications.",
+  "author": {
+    "name": "Claude Image Gen"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "build/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/build/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "${user_config.GEMINI_API_KEY}",
+        "GEMINI_DEFAULT_MODEL": "${user_config.GEMINI_DEFAULT_MODEL}",
+        "IMAGE_OUTPUT_DIR": "${user_config.IMAGE_OUTPUT_DIR}"
+      }
+    }
+  },
+  "user_config": {
+    "GEMINI_API_KEY": {
+      "type": "string",
+      "title": "Gemini API Key",
+      "description": "Your Google Gemini API key. Get one at https://aistudio.google.com/apikey",
+      "required": true,
+      "sensitive": true
+    },
+    "GEMINI_DEFAULT_MODEL": {
+      "type": "string",
+      "title": "Default Model",
+      "description": "Model to use for image generation (gemini-3-pro-image-preview for quality, gemini-2.5-flash-image for speed)",
+      "default": "gemini-3-pro-image-preview"
+    },
+    "IMAGE_OUTPUT_DIR": {
+      "type": "directory",
+      "title": "Output Directory",
+      "description": "Directory where generated images will be saved",
+      "default": "./generated-images"
+    }
+  },
+  "tools": [
+    {
+      "name": "create_asset",
+      "description": "Generate an image using Google Gemini AI. Provide a detailed prompt describing the desired image. The image will be saved to disk and the file path returned."
+    }
+  ],
+  "privacy_policies": [
+    "https://ai.google.dev/gemini-api/terms"
+  ]
+}

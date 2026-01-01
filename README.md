@@ -12,12 +12,30 @@ AI-powered image generation using Google Gemini, integrated with Claude Code via
 
 ## Prerequisites
 
-- Node.js 18+
 - Google Gemini API key ([Get one here](https://aistudio.google.com/apikey))
+- Node.js 18+ (only for manual installation)
 
 ## Installation
 
-### 1. Build the MCP Server
+### Quick Install (Claude Desktop)
+
+The easiest way to install is using the pre-built extension:
+
+1. Download `media-pipeline.mcpb` from [Releases](https://github.com/your-repo/releases)
+2. Open Claude Desktop
+3. Go to **Settings** → **Extensions**
+4. Click **Install Extension** and select the `.mcpb` file
+5. Enter your Gemini API key when prompted
+
+That's it! The extension handles all configuration automatically.
+
+---
+
+### Manual Installation (Claude Code)
+
+For developers who want to customize or integrate with Claude Code:
+
+#### 1. Build the MCP Server
 
 ```bash
 cd mcp-server
@@ -25,21 +43,9 @@ npm install
 npm run build
 ```
 
-### 2. Configure Environment
+#### 2. Add to Claude Code
 
-Set your Gemini API key:
-
-```bash
-# Windows
-set GEMINI_API_KEY=your-api-key-here
-
-# Linux/macOS
-export GEMINI_API_KEY=your-api-key-here
-```
-
-### 3. Add to Claude Code
-
-Add to your Claude Code settings (`~/.claude/settings.json`):
+Add to your Claude Code config (`~/.claude.json`):
 
 ```json
 {
@@ -48,16 +54,30 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
       "command": "node",
       "args": ["/path/to/claude-image-gen/mcp-server/build/index.js"],
       "env": {
-        "GEMINI_API_KEY": "your-api-key-here",
-        "GEMINI_DEFAULT_MODEL": "gemini-3-pro-image-preview",
-        "IMAGE_OUTPUT_DIR": "./generated-images"
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
+        "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}"
       }
     }
   }
 }
 ```
 
-### 4. Install the Skill (Optional)
+The `${VAR:-default}` syntax uses environment variables with fallback defaults. Make sure `GEMINI_API_KEY` is set in your system environment.
+
+#### 3. Build Extension from Source (Optional)
+
+To create your own `.mcpb` extension:
+
+```bash
+cd mcp-server
+npm install -g @anthropic-ai/mcpb
+mcpb pack
+```
+
+This creates a `media-pipeline.mcpb` file that can be installed in Claude Desktop.
+
+### Install the Skill (Optional)
 
 Copy the skill to your Claude Code skills directory:
 
@@ -147,6 +167,7 @@ claude-image-gen/
 │   │   ├── gemini-client.ts
 │   │   ├── image-storage.ts
 │   │   └── types.ts
+│   ├── manifest.json     # MCPB extension manifest
 │   ├── package.json
 │   └── tsconfig.json
 ├── skills/               # Claude skills

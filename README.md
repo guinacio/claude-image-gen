@@ -21,7 +21,7 @@ AI-powered image generation using Google Gemini, integrated with Claude Code via
 
 The easiest way to install is using the pre-built extension:
 
-1. Download `media-pipeline.mcpb` from [Releases](https://github.com/your-repo/releases)
+1. Download `media-pipeline.mcpb` from [Releases](https://github.com/guinacio/claude-image-gen/releases)
 2. Open Claude Desktop
 3. Go to **Settings** → **Extensions**
 4. Click **Install Extension** and select the `.mcpb` file

@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "gemini-image-gen": {
+    "media-pipeline": {
       "command": "node",
       "args": ["./mcp-server/build/index.js"],
       "env": {

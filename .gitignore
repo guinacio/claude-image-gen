@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
 
-# Build output
-mcp-server/build/
+# Build output (keep mcp-server/build/ for plugin distribution)
+# mcp-server/build/
 
 # Generated images
 generated-images/

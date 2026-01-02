@@ -98,7 +98,7 @@ The easiest way to get the skill is via the plugin marketplace:
 /plugin marketplace add guinacio/claude-image-gen
 
 # Install the plugin
-/plugin install gemini-image-gen@gemini-image-gen-marketplace
+/plugin install media-pipeline@media-pipeline-marketplace
 ```
 
 Or install directly from GitHub:

@@ -1,13 +1,13 @@
 {
-  "name": "gemini-image-gen-marketplace",
+  "name": "media-pipeline-marketplace",
   "owner": {
     "name": "Claude Image Gen"
   },
   "plugins": [
     {
-      "name": "gemini-image-gen",
+      "name": "media-pipeline",
       "source": "./",
-      "description": "AI-powered image generation using Google Gemini. Automatically creates hero images, thumbnails, and visual content for websites, presentations, and applications.",
+      "description": "Media asset processing plugin with skills for visual content creation.",
       "version": "1.0.0",
       "author": {
         "name": "Claude Image Gen"

@@ -8,7 +8,6 @@ export class ImageStorage {
 
   constructor(outputDir: string) {
     this.outputDir = path.resolve(outputDir);
-    this.ensureDirectory(this.outputDir);
   }
 
   private ensureDirectory(dirPath: string): void {

@@ -17,9 +17,31 @@ AI-powered image generation using Google Gemini, integrated with Claude Code via
 
 ## Installation
 
-### Quick Install (Claude Desktop)
+### Quick Install (Claude Code Plugin)
 
-The easiest way to install is using the pre-built extension:
+The plugin installs **both the skill and MCP server** in one step—no separate configuration needed.
+
+```bash
+# Add the marketplace
+/plugin marketplace add guinacio/claude-image-gen
+
+# Install the plugin
+/plugin install media-pipeline@media-pipeline-marketplace
+```
+
+Or install directly from GitHub:
+
+```bash
+/plugin install guinacio/claude-image-gen
+```
+
+Once installed, the MCP server runs automatically and the skill is available for proactive image generation.
+
+---
+
+### Quick Install (Claude Desktop Extension)
+
+For Claude Desktop users, install the pre-built extension:
 
 1. Download `media-pipeline.mcpb` from [Releases](https://github.com/guinacio/claude-image-gen/releases)
 2. Open Claude Desktop
@@ -27,13 +49,11 @@ The easiest way to install is using the pre-built extension:
 4. Click **Install Extension** and select the `.mcpb` file
 5. Enter your Gemini API key when prompted
 
-That's it! The extension handles all configuration automatically.
-
 ---
 
-### Manual Installation (Claude Code)
+### Manual Installation
 
-For developers who want to customize or integrate with Claude Code:
+For developers who want to customize or build from source:
 
 #### 1. Build the MCP Server
 
@@ -77,9 +97,17 @@ Add to your Claude Code config (`~/.claude.json`):
 
 The `${VAR:-default}` syntax uses environment variables with fallback defaults.
 
-#### 3. Build Extension from Source (Optional)
+#### 3. Install Skill Manually (Optional)
 
-To create your own `.mcpb` extension:
+If not using the plugin:
+
+```bash
+cp -r skills/image-generation ~/.claude/skills/
+```
+
+#### 4. Build Extension from Source (Optional)
+
+To create your own `.mcpb` extension for Claude Desktop:
 
 ```bash
 cd mcp-server
@@ -87,33 +115,7 @@ npm install -g @anthropic-ai/mcpb
 mcpb pack
 ```
 
-This creates a `media-pipeline.mcpb` file that can be installed in Claude Desktop.
-
-### Install the Plugin (Claude Code)
-
-The plugin installs **both the skill and MCP server** in one step—no separate configuration needed.
-
-```bash
-# Add the marketplace
-/plugin marketplace add guinacio/claude-image-gen
-
-# Install the plugin
-/plugin install media-pipeline@media-pipeline-marketplace
-```
-
-Or install directly from GitHub:
-
-```bash
-/plugin install guinacio/claude-image-gen
-```
-
-Once installed, the MCP server runs automatically and the skill is available for proactive image generation.
-
-**Manual skill installation** (if not using the plugin):
-
-```bash
-cp -r skills/image-generation ~/.claude/skills/
-```
+This creates a `media-pipeline.mcpb` file.
 
 ## Usage
 

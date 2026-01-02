@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "bundle": "npm run build && esbuild build/index.js --bundle --platform=node --target=node18 --format=esm --outfile=build/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "start": "node build/index.js",
     "dev": "tsc --watch"
   },
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
   },
   "files": [

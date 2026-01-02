@@ -91,7 +91,7 @@ This creates a `media-pipeline.mcpb` file that can be installed in Claude Deskto
 
 ### Install the Plugin (Claude Code)
 
-The easiest way to get the skill is via the plugin marketplace:
+The plugin installs **both the skill and MCP server** in one step—no separate configuration needed.
 
 ```bash
 # Add the marketplace
@@ -107,7 +107,9 @@ Or install directly from GitHub:
 /plugin install guinacio/claude-image-gen
 ```
 
-**Manual installation** (if not using marketplace):
+Once installed, the MCP server runs automatically and the skill is available for proactive image generation.
+
+**Manual skill installation** (if not using the plugin):
 
 ```bash
 cp -r skills/image-generation ~/.claude/skills/

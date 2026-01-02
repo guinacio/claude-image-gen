@@ -1,0 +1,10 @@
+{
+  "name": "gemini-image-gen",
+  "description": "AI-powered image generation using Google Gemini. Automatically creates hero images, thumbnails, and visual content for websites, presentations, and applications.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Claude Image Gen"
+  },
+  "repository": "https://github.com/guinacio/claude-image-gen",
+  "license": "MIT"
+}

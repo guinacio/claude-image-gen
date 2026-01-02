@@ -45,6 +45,18 @@ npm run build
 
 #### 2. Add to Claude Code
 
+**Option A: Using CLI (recommended)**
+
+```bash
+claude mcp add --transport stdio media-pipeline \
+  --env GEMINI_API_KEY=your-api-key-here \
+  -- node /path/to/claude-image-gen/mcp-server/build/index.js
+```
+
+The `--` separates Claude CLI flags from the server command.
+
+**Option B: Manual config**
+
 Add to your Claude Code config (`~/.claude.json`):
 
 ```json
@@ -63,7 +75,7 @@ Add to your Claude Code config (`~/.claude.json`):
 }
 ```
 
-The `${VAR:-default}` syntax uses environment variables with fallback defaults. Make sure `GEMINI_API_KEY` is set in your system environment.
+The `${VAR:-default}` syntax uses environment variables with fallback defaults.
 
 #### 3. Build Extension from Source (Optional)
 
@@ -77,9 +89,25 @@ mcpb pack
 
 This creates a `media-pipeline.mcpb` file that can be installed in Claude Desktop.
 
-### Install the Skill (Optional)
+### Install the Plugin (Claude Code)
 
-Copy the skill to your Claude Code skills directory:
+The easiest way to get the skill is via the plugin marketplace:
+
+```bash
+# Add the marketplace
+/plugin marketplace add guinacio/claude-image-gen
+
+# Install the plugin
+/plugin install gemini-image-gen@gemini-image-gen-marketplace
+```
+
+Or install directly from GitHub:
+
+```bash
+/plugin install guinacio/claude-image-gen
+```
+
+**Manual installation** (if not using marketplace):
 
 ```bash
 cp -r skills/image-generation ~/.claude/skills/
@@ -161,6 +189,9 @@ This is a form of prompt engineering for tool selection—making the abstraction
 
 ```
 claude-image-gen/
+├── .claude-plugin/       # Plugin configuration
+│   ├── plugin.json       # Plugin manifest
+│   └── marketplace.json  # Marketplace distribution
 ├── mcp-server/           # MCP server implementation
 │   ├── src/
 │   │   ├── index.ts      # Server entry point
@@ -168,6 +199,7 @@ claude-image-gen/
 │   │   ├── image-storage.ts
 │   │   └── types.ts
 │   ├── manifest.json     # MCPB extension manifest
+│   ├── icon.png          # Extension icon
 │   ├── package.json
 │   └── tsconfig.json
 ├── skills/               # Claude skills

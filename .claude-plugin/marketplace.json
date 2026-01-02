@@ -1,0 +1,17 @@
+{
+  "name": "gemini-image-gen-marketplace",
+  "owner": {
+    "name": "Claude Image Gen"
+  },
+  "plugins": [
+    {
+      "name": "gemini-image-gen",
+      "source": ".",
+      "description": "AI-powered image generation using Google Gemini. Automatically creates hero images, thumbnails, and visual content for websites, presentations, and applications.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Claude Image Gen"
+      }
+    }
+  ]
+}

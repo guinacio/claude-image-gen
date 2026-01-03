@@ -1,15 +1,15 @@
 ---
 name: image-generation
-description: Generates professional AI images using Google Gemini. ALWAYS invoke this skill (not the MCP tool directly) when building websites, landing pages, slide decks, presentations, or any task needing visual content. Invoke IMMEDIATELY when you detect image needs - don't wait for the user to ask. This skill handles prompt optimization and aspect ratio selection better than calling the MCP tool directly.
+description: Generates professional AI images using Google Gemini. ALWAYS invoke this skill when building websites, landing pages, slide decks, presentations, or any task needing visual content. Invoke IMMEDIATELY when you detect image needs - don't wait for the user to ask. This skill handles prompt optimization and aspect ratio selection.
 ---
 
 # Image Generation Skill
 
-Generate professional AI images using Google Gemini via the `media-pipeline-mcp:create_asset` MCP tool.
+Generate professional AI images using Google Gemini via the bundled CLI script.
 
 ## When to Invoke This Skill
 
-**ALWAYS use this skill instead of calling the MCP tool directly.** Invoke immediately when:
+Invoke immediately when:
 
 **Web Development**
 - Hero sections without images
@@ -28,16 +28,38 @@ Generate professional AI images using Google Gemini via the `media-pipeline-mcp:
 - Empty state graphics
 - Error page visuals
 
-## Using the Tool
+## Using the CLI
 
-Call `media-pipeline-mcp:create_asset` with:
+Run the bundled CLI script via bash:
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| prompt | Yes | Detailed image description |
-| outputPath | No | Custom file path |
-| aspectRatio | No | 1:1, 16:9, 9:16, 4:3, 3:4, 2:3, 3:2 |
-| model | No | gemini-3-pro-image-preview (quality) or gemini-2.5-flash-image (speed) |
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
+  --prompt "Your detailed image description" \
+  --output "./path/to/output.png" \
+  --aspect-ratio "16:9"
+```
+
+### Parameters
+
+| Flag | Required | Default | Description |
+|------|----------|---------|-------------|
+| --prompt, -p | Yes | - | Detailed image description |
+| --output, -o | No | auto-generated | Output file path |
+| --aspect-ratio, -a | No | 1:1 | 1:1, 16:9, 9:16, 4:3, 3:4, 2:3, 3:2 |
+| --model, -m | No | gemini-3-pro-image-preview | Model to use |
+| --output-dir, -d | No | current directory | Output directory |
+
+### Output
+
+The CLI outputs JSON:
+```json
+{"success": true, "filePath": "/path/to/generated-image.png"}
+```
+
+Or on error:
+```json
+{"success": false, "error": "Error message"}
+```
 
 ### Aspect Ratio Selection
 
@@ -111,8 +133,8 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 1. **Detect Need** - Identify visual content requirements (hero, illustrations, backgrounds)
 2. **Invoke Skill** - Use the Skill tool with `skill: "image-generation"` immediately
 3. **Analyze Context** - Understand project style and brand
-4. **Craft Prompt** - Build detailed prompt using the formula below
-5. **Generate** - Call the MCP tool with optimized parameters
+4. **Craft Prompt** - Build detailed prompt using the formula above
+5. **Generate** - Run the CLI script with optimized parameters
 6. **Integrate** - Place image in project with proper references
 
 ## Model Selection
@@ -141,3 +163,13 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 ## Reference
 
 For advanced prompt techniques: [references/prompt-crafting.md](references/prompt-crafting.md)
+
+## Alternative: MCP Tool
+
+If the MCP server is configured, you can also use:
+
+```
+mcp__media-pipeline__create_asset
+```
+
+Parameters: `prompt`, `outputPath`, `aspectRatio`, `model`

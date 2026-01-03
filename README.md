@@ -1,11 +1,12 @@
-# Gemini Image Generation MCP + Claude Skill
+# Gemini Image Generation - Claude Skill + MCP
 
-AI-powered image generation using Google Gemini, integrated with Claude Code via MCP (Model Context Protocol).
+AI-powered image generation using Google Gemini, integrated with Claude Code.
 
 ## Features
 
 - Generate images from text prompts using Gemini AI
 - Proactive Claude skill suggests images for websites, presentations, and more
+- **Two execution modes**: CLI script (skill-only) or MCP server (protocol-based)
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
 - Multiple model support (quality vs speed)
 - Images saved to disk with file paths returned
@@ -19,7 +20,7 @@ AI-powered image generation using Google Gemini, integrated with Claude Code via
 
 ### Quick Install (Claude Code Plugin)
 
-The plugin installs **both the skill and MCP server** in one step—no separate configuration needed.
+The plugin installs **skill + CLI + MCP server** in one step—no separate configuration needed.
 
 ```bash
 # Add the marketplace
@@ -35,7 +36,9 @@ Or install directly from GitHub:
 /plugin install guinacio/claude-image-gen
 ```
 
-Once installed, the MCP server runs automatically and the skill is available for proactive image generation.
+Once installed:
+- **Skill** uses the bundled CLI script (no MCP overhead)
+- **MCP server** is also available for direct tool calls
 
 ---
 
@@ -177,7 +180,27 @@ modern professional aesthetic, wide composition for website header
 
 See [skills/image-generation/references/prompt-crafting.md](skills/image-generation/references/prompt-crafting.md) for advanced techniques.
 
-## Design: Abstract MCP Naming
+## Architecture
+
+### Two Execution Modes
+
+**CLI Mode (Default)** - Used by the skill:
+```
+Claude → Skill → Bash → CLI script → Gemini API
+```
+- No MCP protocol overhead
+- Skill runs bundled CLI directly
+- All dependencies bundled in single file
+
+**MCP Mode (Optional)** - For direct tool calls:
+```
+Claude → MCP Tool → MCP Server → Gemini API
+```
+- Standard MCP protocol
+- Useful for non-skill workflows
+- Same bundled dependencies
+
+### Abstract MCP Naming
 
 The MCP server uses intentionally abstract naming (`media-pipeline` / `create_asset`) rather than image-specific names (`gemini-image-gen` / `generate_image`).
 
@@ -196,19 +219,23 @@ claude-image-gen/
 ├── .claude-plugin/       # Plugin configuration
 │   ├── plugin.json       # Plugin manifest
 │   └── marketplace.json  # Marketplace distribution
-├── mcp-server/           # MCP server implementation
+├── mcp-server/           # Server and CLI implementation
 │   ├── src/
-│   │   ├── index.ts      # Server entry point
+│   │   ├── index.ts      # MCP server entry point
+│   │   ├── cli.ts        # CLI entry point (skill uses this)
 │   │   ├── gemini-client.ts
 │   │   ├── image-storage.ts
 │   │   └── types.ts
+│   ├── build/
+│   │   ├── bundle.js     # Bundled MCP server
+│   │   └── cli.bundle.js # Bundled CLI (all deps included)
 │   ├── manifest.json     # MCPB extension manifest
 │   ├── icon.png          # Extension icon
 │   ├── package.json
 │   └── tsconfig.json
 ├── skills/               # Claude skills
 │   └── image-generation/
-│       ├── SKILL.md
+│       ├── SKILL.md      # Skill instructions (uses CLI)
 │       └── references/
 ├── .mcp.json            # MCP configuration
 └── README.md

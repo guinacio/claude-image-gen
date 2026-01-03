@@ -9,7 +9,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "bundle": "npm run build && esbuild build/index.js --bundle --platform=node --target=node18 --format=esm --outfile=build/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "bundle:mcp": "esbuild build/index.js --bundle --platform=node --target=node18 --format=esm --outfile=build/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "bundle:cli": "esbuild build/cli.js --bundle --platform=node --target=node18 --format=esm --outfile=build/cli.bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "bundle": "npm run build && npm run bundle:mcp && npm run bundle:cli",
     "start": "node build/index.js",
     "dev": "tsc --watch"
   },

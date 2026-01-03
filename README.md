@@ -40,6 +40,8 @@ Once installed:
 - **Skill** uses the bundled CLI script (no MCP overhead)
 - **MCP server** is also available for direct tool calls
 
+> **Tip:** Since the skill runs the CLI directly, you can disable the MCP server in Claude Code's MCP list to reduce startup overhead. The skill will continue to work without it.
+
 ---
 
 ### Quick Install (Claude Desktop Extension)

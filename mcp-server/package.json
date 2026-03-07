@@ -3,16 +3,20 @@
   "version": "1.0.0",
   "description": "MCP server for media asset processing",
   "type": "module",
-  "main": "build/index.js",
+  "main": "build/bundle.js",
   "bin": {
-    "media-pipeline": "./build/index.js"
+    "media-pipeline": "./build/bundle.js",
+    "media-pipeline-cli": "./build/cli.bundle.js"
   },
   "scripts": {
     "build": "tsc",
     "bundle:mcp": "esbuild build/index.js --bundle --platform=node --target=node18 --format=esm --outfile=build/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "bundle:cli": "esbuild build/cli.js --bundle --platform=node --target=node18 --format=esm --outfile=build/cli.bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "bundle": "npm run build && npm run bundle:mcp && npm run bundle:cli",
-    "start": "node build/index.js",
+    "start": "node build/bundle.js",
+    "start:cli": "node build/cli.bundle.js --help",
+    "smoke:test": "node scripts/smoke-test.mjs",
+    "pack:mcpb": "npm run bundle && npm run smoke:test && mcpb pack . media-pipeline.mcpb",
     "dev": "tsc --watch"
   },
   "dependencies": {

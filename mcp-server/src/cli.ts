@@ -1,38 +1,41 @@
 #!/usr/bin/env node
 /**
- * CLI for generating images using Google Gemini API.
- * This is a standalone script that reuses the GeminiImageClient and ImageStorage classes.
+ * Standalone CLI for generating images using Google Gemini API.
+ * This path does not require the MCP server or stdio transport.
  *
  * Usage:
- *   node cli.js --prompt "..." --output "./image.png" --aspect-ratio "16:9"
+ *   node build/cli.bundle.js --prompt "..." --output "./image.png" --aspect-ratio "16:9"
  */
 
 import { parseArgs } from "node:util";
-import { GeminiImageClient } from "./gemini-client.js";
-import { ImageStorage } from "./image-storage.js";
-import type { AspectRatio, GeminiModel } from "./types.js";
-
-const VALID_ASPECT_RATIOS = ["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"];
-const VALID_MODELS = ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"];
+import { MediaPipelineService } from "./media-pipeline-service.js";
+import { createAssetArgsSchema } from "./schemas.js";
+import { createLogger, createRuntimeConfig } from "./runtime.js";
+import { ASPECT_RATIOS } from "./types.js";
 
 function printHelp(): void {
   console.log(`
-Usage: node cli.js [options]
+Usage: node build/cli.bundle.js [options]
 
 Options:
   -p, --prompt <text>        Image description (required)
   -o, --output <path>        Output file path (optional, auto-generated if not provided)
-  -a, --aspect-ratio <ratio> Aspect ratio: 1:1, 16:9, 9:16, 4:3, 3:4, 2:3, 3:2 (default: 1:1)
-  -m, --model <model>        Model: gemini-3-pro-image-preview, gemini-2.5-flash-image
+  -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
+  -m, --model <model>        Model to use (validated dynamically against the API)
   -d, --output-dir <dir>     Output directory (default: current directory)
+  -t, --timeout-ms <ms>      Gemini request timeout in milliseconds
+  -l, --log-level <level>    Logging level: error, warn, info, debug
   -h, --help                 Show this help message
 
 Environment:
   GEMINI_API_KEY             Your Gemini API key (required)
+  GEMINI_DEFAULT_MODEL       Preferred default model (optional)
+  GEMINI_REQUEST_TIMEOUT_MS  Request timeout in milliseconds (optional)
+  MEDIA_PIPELINE_LOG_LEVEL   Logging level for stderr diagnostics (optional)
 
 Examples:
-  node cli.js -p "A sunset over mountains" -o "./sunset.png"
-  node cli.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
+  node build/cli.bundle.js -p "A sunset over mountains" -o "./sunset.png"
+  node build/cli.bundle.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
 `);
 }
 
@@ -43,8 +46,10 @@ async function main(): Promise<void> {
         prompt: { type: "string", short: "p" },
         output: { type: "string", short: "o" },
         "aspect-ratio": { type: "string", short: "a", default: "1:1" },
-        model: { type: "string", short: "m", default: "gemini-3-pro-image-preview" },
+        model: { type: "string", short: "m" },
         "output-dir": { type: "string", short: "d", default: process.cwd() },
+        "timeout-ms": { type: "string", short: "t" },
+        "log-level": { type: "string", short: "l" },
         help: { type: "boolean", short: "h", default: false },
       },
       strict: true,
@@ -56,92 +61,59 @@ async function main(): Promise<void> {
       process.exit(0);
     }
 
-    // Validate prompt
-    if (!values.prompt) {
-      console.log(JSON.stringify({
-        success: false,
-        error: "Missing required argument: --prompt"
-      }));
-      process.exit(1);
-    }
-
-    // Validate aspect ratio
-    const aspectRatio = values["aspect-ratio"] as string;
-    if (!VALID_ASPECT_RATIOS.includes(aspectRatio)) {
-      console.log(JSON.stringify({
-        success: false,
-        error: `Invalid aspect ratio: ${aspectRatio}. Valid options: ${VALID_ASPECT_RATIOS.join(", ")}`
-      }));
-      process.exit(1);
-    }
-
-    // Validate model
-    const model = values.model as string;
-    if (!VALID_MODELS.includes(model)) {
-      console.log(JSON.stringify({
-        success: false,
-        error: `Invalid model: ${model}. Valid options: ${VALID_MODELS.join(", ")}`
-      }));
-      process.exit(1);
-    }
-
-    // Get API key from environment
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.log(JSON.stringify({
-        success: false,
-        error: "GEMINI_API_KEY environment variable not set"
-      }));
-      process.exit(1);
-    }
-
-    // Create client and generate image
-    const client = new GeminiImageClient({
-      apiKey,
-      defaultModel: model as GeminiModel,
-      outputDirectory: values["output-dir"] as string,
-    });
-
-    const result = await client.generateImage({
+    const parsedArgs = createAssetArgsSchema.safeParse({
       prompt: values.prompt,
-      aspectRatio: aspectRatio as AspectRatio,
-      model: model as GeminiModel,
+      outputPath: values.output,
+      aspectRatio: values["aspect-ratio"],
+      model: values.model,
     });
+
+    if (!parsedArgs.success) {
+      console.log(JSON.stringify({
+        success: false,
+        errorCode: "VALIDATION_ERROR",
+        error: parsedArgs.error.issues[0]?.message || "Invalid CLI arguments",
+      }));
+      process.exit(1);
+    }
+
+    const runtimeConfig = createRuntimeConfig({
+      ...process.env,
+      IMAGE_OUTPUT_DIR:
+        (values["output-dir"] as string | undefined) || process.env.IMAGE_OUTPUT_DIR,
+      GEMINI_REQUEST_TIMEOUT_MS:
+        (values["timeout-ms"] as string | undefined) ||
+        process.env.GEMINI_REQUEST_TIMEOUT_MS,
+      MEDIA_PIPELINE_LOG_LEVEL:
+        (values["log-level"] as string | undefined) ||
+        process.env.MEDIA_PIPELINE_LOG_LEVEL,
+    });
+
+    const logger = createLogger("cli", runtimeConfig.logLevel);
+
+    if (!runtimeConfig.apiKey) {
+      console.log(JSON.stringify({
+        success: false,
+        errorCode: "CONFIG_ERROR",
+        error: "GEMINI_API_KEY environment variable not set",
+      }));
+      process.exit(1);
+    }
+
+    const service = new MediaPipelineService(runtimeConfig, logger);
+    const result = await service.createAsset(parsedArgs.data);
+
+    console.log(JSON.stringify(result));
 
     if (!result.success) {
-      console.log(JSON.stringify({
-        success: false,
-        error: result.error
-      }));
       process.exit(1);
     }
-
-    // Save the image
-    const storage = new ImageStorage(values["output-dir"] as string);
-    const saved = storage.saveImage(
-      result.base64Data!,
-      values.output,
-      result.mimeType
-    );
-
-    if (!saved.success) {
-      console.log(JSON.stringify({
-        success: false,
-        error: saved.error
-      }));
-      process.exit(1);
-    }
-
-    // Output success result
-    console.log(JSON.stringify({
-      success: true,
-      filePath: saved.filePath,
-    }));
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.log(JSON.stringify({
       success: false,
+      errorCode: "CLI_ERROR",
       error: `CLI error: ${errorMessage}`
     }));
     process.exit(1);
@@ -149,3 +121,4 @@ async function main(): Promise<void> {
 }
 
 main();
+

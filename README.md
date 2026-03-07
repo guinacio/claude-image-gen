@@ -65,17 +65,28 @@ For developers who want to customize or build from source:
 ```bash
 cd mcp-server
 npm install
-npm run build
+npm run bundle
 ```
 
-#### 2. Add to Claude Code
+#### 2. Use the Standalone CLI
 
-**Option A: Using CLI (recommended)**
+```bash
+cd mcp-server
+GEMINI_API_KEY=your-api-key-here node build/cli.bundle.js \
+  --prompt "Landing page hero image for a fintech startup" \
+  --aspect-ratio "16:9"
+```
+
+The CLI runs directly against Gemini and returns structured JSON on stdout. It does not require the MCP server layer.
+
+#### 3. Add to Claude Code
+
+**Option A: Using MCP server**
 
 ```bash
 claude mcp add --transport stdio media-pipeline \
   --env GEMINI_API_KEY=your-api-key-here \
-  -- node /path/to/claude-image-gen/mcp-server/build/index.js
+  -- node /path/to/claude-image-gen/mcp-server/build/bundle.js
 ```
 
 The `--` separates Claude CLI flags from the server command.
@@ -89,11 +100,13 @@ Add to your Claude Code config (`~/.claude.json`):
   "mcpServers": {
     "media-pipeline": {
       "command": "node",
-      "args": ["/path/to/claude-image-gen/mcp-server/build/index.js"],
+      "args": ["/path/to/claude-image-gen/mcp-server/build/bundle.js"],
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}",
         "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
-        "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}"
+        "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}",
+        "GEMINI_REQUEST_TIMEOUT_MS": "${GEMINI_REQUEST_TIMEOUT_MS:-60000}",
+        "MEDIA_PIPELINE_LOG_LEVEL": "${MEDIA_PIPELINE_LOG_LEVEL:-info}"
       }
     }
   }
@@ -102,7 +115,7 @@ Add to your Claude Code config (`~/.claude.json`):
 
 The `${VAR:-default}` syntax uses environment variables with fallback defaults.
 
-#### 3. Install Skill Manually (Optional)
+#### 4. Install Skill Manually (Optional)
 
 If not using the plugin:
 
@@ -117,10 +130,10 @@ To create your own `.mcpb` extension for Claude Desktop:
 ```bash
 cd mcp-server
 npm install -g @anthropic-ai/mcpb
-mcpb pack
+npm run pack:mcpb
 ```
 
-This creates a `media-pipeline.mcpb` file.
+This creates `mcp-server/media-pipeline.mcpb` using bundled runtime entry points for both the MCP server and the standalone CLI.
 
 ## Usage
 
@@ -147,13 +160,12 @@ The skill will proactively suggest image generation when:
 | `GEMINI_API_KEY` | Yes | - | Your Gemini API key |
 | `GEMINI_DEFAULT_MODEL` | No | `gemini-3-pro-image-preview` | Default model to use |
 | `IMAGE_OUTPUT_DIR` | No | `./generated-images` | Where to save images |
+| `GEMINI_REQUEST_TIMEOUT_MS` | No | `60000` | Timeout for Gemini requests |
+| `MEDIA_PIPELINE_LOG_LEVEL` | No | `info` | Stderr logging level |
 
 ### Models
 
-| Model | Description |
-|-------|-------------|
-| `gemini-3-pro-image-preview` | Higher quality, better style interpretation |
-| `gemini-2.5-flash-image` | Faster generation, good for prototyping |
+Available image models are fetched dynamically from the Gemini API at runtime. The CLI and MCP tool validate model choices against the current image-capable model list, and `GEMINI_DEFAULT_MODEL` is used when available.
 
 ### Aspect Ratios
 
@@ -188,19 +200,19 @@ See [skills/image-generation/references/prompt-crafting.md](skills/image-generat
 
 **CLI Mode (Default)** - Used by the skill:
 ```
-Claude → Skill → Bash → CLI script → Gemini API
+Claude → Skill → Bash → bundled CLI → Gemini API
 ```
 - No MCP protocol overhead
 - Skill runs bundled CLI directly
-- All dependencies bundled in single file
+- All dependencies bundled in a single file
 
 **MCP Mode (Optional)** - For direct tool calls:
 ```
-Claude → MCP Tool → MCP Server → Gemini API
+Claude → MCP Tool → bundled MCP server → Gemini API
 ```
 - Standard MCP protocol
 - Useful for non-skill workflows
-- Same bundled dependencies
+- Extension package only needs bundled entry points
 
 ### Abstract MCP Naming
 
@@ -231,6 +243,7 @@ claude-image-gen/
 │   ├── build/
 │   │   ├── bundle.js     # Bundled MCP server
 │   │   └── cli.bundle.js # Bundled CLI (all deps included)
+│   ├── .mcpbignore       # Package only the runtime files needed by the bundle
 │   ├── manifest.json     # MCPB extension manifest
 │   ├── icon.png          # Extension icon
 │   ├── package.json
@@ -246,3 +259,4 @@ claude-image-gen/
 ## License
 
 MIT
+

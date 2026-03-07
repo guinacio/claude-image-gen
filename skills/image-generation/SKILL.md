@@ -139,13 +139,7 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 
 ## Model Selection
 
-**gemini-3-pro-image-preview** (Default)
-- Higher quality, more nuanced style interpretation
-- Best for final production images
-
-**gemini-2.5-flash-image**
-- Faster generation
-- Good for prototyping and placeholders
+Available models are fetched dynamically from the Gemini API. By default, the CLI uses `GEMINI_DEFAULT_MODEL` when it is available, otherwise it falls back to the first discovered image-capable model.
 
 ## Best Practices
 
@@ -173,3 +167,4 @@ mcp__media-pipeline__create_asset
 ```
 
 Parameters: `prompt`, `outputPath`, `aspectRatio`, `model`
+

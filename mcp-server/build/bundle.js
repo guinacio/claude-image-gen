@@ -2241,8 +2241,8 @@ var require_resolve = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize) {
-      if (normalize !== false)
+    function getFullPath(resolver, id = "", normalize2) {
+      if (normalize2 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -3582,7 +3582,7 @@ var require_fast_uri = __commonJS({
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizeComponentEncoding, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
-    function normalize(uri, options) {
+    function normalize2(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
         serialize(parse3(uri, options), options);
@@ -3598,49 +3598,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative, options, skipNormalization) {
+    function resolveComponent(base, relative2, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse3(serialize(base, options), options);
-        relative = parse3(serialize(relative, options), options);
+        relative2 = parse3(serialize(relative2, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative.scheme) {
-        target.scheme = relative.scheme;
-        target.userinfo = relative.userinfo;
-        target.host = relative.host;
-        target.port = relative.port;
-        target.path = removeDotSegments(relative.path || "");
-        target.query = relative.query;
+      if (!options.tolerant && relative2.scheme) {
+        target.scheme = relative2.scheme;
+        target.userinfo = relative2.userinfo;
+        target.host = relative2.host;
+        target.port = relative2.port;
+        target.path = removeDotSegments(relative2.path || "");
+        target.query = relative2.query;
       } else {
-        if (relative.userinfo !== void 0 || relative.host !== void 0 || relative.port !== void 0) {
-          target.userinfo = relative.userinfo;
-          target.host = relative.host;
-          target.port = relative.port;
-          target.path = removeDotSegments(relative.path || "");
-          target.query = relative.query;
+        if (relative2.userinfo !== void 0 || relative2.host !== void 0 || relative2.port !== void 0) {
+          target.userinfo = relative2.userinfo;
+          target.host = relative2.host;
+          target.port = relative2.port;
+          target.path = removeDotSegments(relative2.path || "");
+          target.query = relative2.query;
         } else {
-          if (!relative.path) {
+          if (!relative2.path) {
             target.path = base.path;
-            if (relative.query !== void 0) {
-              target.query = relative.query;
+            if (relative2.query !== void 0) {
+              target.query = relative2.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative.path[0] === "/") {
-              target.path = removeDotSegments(relative.path);
+            if (relative2.path[0] === "/") {
+              target.path = removeDotSegments(relative2.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative.path;
+                target.path = "/" + relative2.path;
               } else if (!base.path) {
-                target.path = relative.path;
+                target.path = relative2.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative2.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative.query;
+            target.query = relative2.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -3648,7 +3648,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative.fragment;
+      target.fragment = relative2.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -3818,7 +3818,7 @@ var require_fast_uri = __commonJS({
     }
     var fastUri = {
       SCHEMES,
-      normalize,
+      normalize: normalize2,
       resolve: resolve2,
       resolveComponent,
       equal,
@@ -4374,13 +4374,13 @@ var require_core = __commonJS({
     }, warn() {
     }, error() {
     } };
-    function getLogger(logger) {
-      if (logger === false)
+    function getLogger(logger2) {
+      if (logger2 === false)
         return noLogs;
-      if (logger === void 0)
+      if (logger2 === void 0)
         return console;
-      if (logger.log && logger.warn && logger.error)
-        return logger;
+      if (logger2.log && logger2.warn && logger2.error)
+        return logger2;
       throw new Error("logger must implement log, warn and error methods");
     }
     var KEYWORD_NAME = /^[a-z_$][a-z0-9_$:-]*$/i;
@@ -17486,12 +17486,12 @@ var require_logging_utils = __commonJS({
             this.setFilters();
             this.filtersSet = true;
           }
-          let logger = this.cached.get(namespace);
-          if (!logger) {
-            logger = this.makeLogger(namespace);
-            this.cached.set(namespace, logger);
+          let logger2 = this.cached.get(namespace);
+          if (!logger2) {
+            logger2 = this.makeLogger(namespace);
+            this.cached.set(namespace, logger2);
           }
-          logger(fields, ...args);
+          logger2(fields, ...args);
         } catch (e2) {
           console.error(e2);
         }
@@ -17636,7 +17636,7 @@ var require_logging_utils = __commonJS({
       } else if (cachedBackend === void 0) {
         cachedBackend = getNodeBackend();
       }
-      const logger = (() => {
+      const logger2 = (() => {
         let previousBackend = void 0;
         const newLogger = new AdhocDebugLogger(namespace, (fields, ...args) => {
           if (previousBackend !== cachedBackend) {
@@ -17651,8 +17651,8 @@ var require_logging_utils = __commonJS({
         });
         return newLogger;
       })();
-      loggerCache.set(namespace, logger);
-      return logger.func;
+      loggerCache.set(namespace, logger2);
+      return logger2.func;
     }
   }
 });
@@ -17740,14 +17740,14 @@ var require_src4 = __commonJS({
     var gaxios_1 = require_src2();
     var jsonBigint = require_json_bigint();
     var gcp_residency_1 = require_gcp_residency();
-    var logger = __importStar(require_src3());
+    var logger2 = __importStar(require_src3());
     exports.BASE_PATH = "/computeMetadata/v1";
     exports.HOST_ADDRESS = "http://169.254.169.254";
     exports.SECONDARY_HOST_ADDRESS = "http://metadata.google.internal.";
     exports.HEADER_NAME = "Metadata-Flavor";
     exports.HEADER_VALUE = "Google";
     exports.HEADERS = Object.freeze({ [exports.HEADER_NAME]: exports.HEADER_VALUE });
-    var log = logger.log("gcp-metadata");
+    var log = logger2.log("gcp-metadata");
     exports.METADATA_SERVER_DETECTION = Object.freeze({
       "assume-present": "don't try to ping the metadata server, but assume it's present",
       none: "don't try to ping the metadata server, but don't try to use it either",
@@ -53745,11 +53745,11 @@ var parseLogLevel = (maybeLevel, sourceName, client) => {
 };
 function noop2() {
 }
-function makeLogFn(fnLevel, logger, logLevel) {
-  if (!logger || levelNumbers[fnLevel] > levelNumbers[logLevel]) {
+function makeLogFn(fnLevel, logger2, logLevel) {
+  if (!logger2 || levelNumbers[fnLevel] > levelNumbers[logLevel]) {
     return noop2;
   } else {
-    return logger[fnLevel].bind(logger);
+    return logger2[fnLevel].bind(logger2);
   }
 }
 var noopLogger = {
@@ -53761,22 +53761,22 @@ var noopLogger = {
 var cachedLoggers = /* @__PURE__ */ new WeakMap();
 function loggerFor(client) {
   var _a2;
-  const logger = client.logger;
+  const logger2 = client.logger;
   const logLevel = (_a2 = client.logLevel) !== null && _a2 !== void 0 ? _a2 : "off";
-  if (!logger) {
+  if (!logger2) {
     return noopLogger;
   }
-  const cachedLogger = cachedLoggers.get(logger);
+  const cachedLogger = cachedLoggers.get(logger2);
   if (cachedLogger && cachedLogger[0] === logLevel) {
     return cachedLogger[1];
   }
   const levelLogger = {
-    error: makeLogFn("error", logger, logLevel),
-    warn: makeLogFn("warn", logger, logLevel),
-    info: makeLogFn("info", logger, logLevel),
-    debug: makeLogFn("debug", logger, logLevel)
+    error: makeLogFn("error", logger2, logLevel),
+    warn: makeLogFn("warn", logger2, logLevel),
+    info: makeLogFn("info", logger2, logLevel),
+    debug: makeLogFn("debug", logger2, logLevel)
   };
-  cachedLoggers.set(logger, [logLevel, levelLogger]);
+  cachedLoggers.set(logger2, [logLevel, levelLogger]);
   return levelLogger;
 }
 var formatRequestDetails = (details) => {
@@ -53806,7 +53806,7 @@ var Stream3 = class _Stream {
   }
   static fromSSEResponse(response, controller, client) {
     let consumed = false;
-    const logger = client ? loggerFor(client) : console;
+    const logger2 = client ? loggerFor(client) : console;
     function iterator() {
       return __asyncGenerator(this, arguments, function* iterator_1() {
         var _a2, e_1, _b, _c;
@@ -53830,8 +53830,8 @@ var Stream3 = class _Stream {
                 try {
                   yield yield __await(JSON.parse(sse.data));
                 } catch (e2) {
-                  logger.error(`Could not parse message into JSON:`, sse.data);
-                  logger.error(`From chunk:`, sse.raw);
+                  logger2.error(`Could not parse message into JSON:`, sse.data);
+                  logger2.error(`From chunk:`, sse.raw);
                   throw e2;
                 }
               }
@@ -56198,7 +56198,48 @@ function getApiKeyFromEnv() {
   return envGoogleApiKey || envGeminiApiKey || void 0;
 }
 
+// build/types.js
+var ASPECT_RATIOS = [
+  "1:1",
+  "2:3",
+  "3:2",
+  "3:4",
+  "4:3",
+  "16:9",
+  "9:16"
+];
+var FALLBACK_IMAGE_MODELS = [
+  "gemini-3-pro-image-preview",
+  "gemini-2.5-flash-image"
+];
+var DEFAULT_REQUEST_TIMEOUT_MS = 6e4;
+var DEFAULT_LOG_LEVEL = "info";
+
 // build/gemini-client.js
+async function fetchImageModels(apiKey, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
+  const ai = new GoogleGenAI({ apiKey });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const pager = await ai.models.list({
+      config: {
+        abortSignal: controller.signal,
+        httpOptions: {
+          timeout: timeoutMs
+        }
+      }
+    });
+    const imageModels = /* @__PURE__ */ new Set();
+    for await (const model of pager) {
+      if (model.name && model.name.includes("image") && model.supportedActions?.includes("generateContent")) {
+        imageModels.add(model.name.replace(/^models\//, ""));
+      }
+    }
+    return [...imageModels].sort((left, right) => left.localeCompare(right));
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 var GeminiImageClient = class {
   ai;
   config;
@@ -56207,10 +56248,17 @@ var GeminiImageClient = class {
     this.config = config2;
   }
   async generateImage(input) {
+    const timeoutMs = input.timeoutMs || this.config.requestTimeoutMs;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const modelName = input.model || this.config.defaultModel;
       const generationConfig = {
-        responseModalities: ["TEXT", "IMAGE"]
+        responseModalities: ["TEXT", "IMAGE"],
+        abortSignal: controller.signal,
+        httpOptions: {
+          timeout: timeoutMs
+        }
       };
       if (input.aspectRatio) {
         generationConfig.imageConfig = {
@@ -56253,8 +56301,11 @@ var GeminiImageClient = class {
       const errorMessage = error2 instanceof Error ? error2.message : String(error2);
       return {
         success: false,
-        error: `Gemini API error: ${errorMessage}`
+        errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "GEMINI_API_ERROR",
+        error: controller.signal.aborted ? `Gemini request timed out after ${timeoutMs}ms` : `Gemini API error: ${errorMessage}`
       };
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 };
@@ -56267,6 +56318,7 @@ var ImageStorage = class {
   outputDir;
   constructor(outputDir) {
     this.outputDir = path2.resolve(outputDir);
+    this.ensureDirectory(this.outputDir);
   }
   ensureDirectory(dirPath) {
     if (!fs3.existsSync(dirPath)) {
@@ -56276,11 +56328,13 @@ var ImageStorage = class {
   saveImage(base64Data, customPath, mimeType = "image/png") {
     try {
       const extension = this.getExtensionFromMimeType(mimeType);
-      const filename = customPath || `generated-${randomUUID()}${extension}`;
-      const filePath = path2.isAbsolute(filename) ? filename : path2.join(this.outputDir, filename);
+      const filePath = this.resolveFilePath(customPath, extension);
       const parentDir = path2.dirname(filePath);
       this.ensureDirectory(parentDir);
       const buffer = Buffer.from(base64Data, "base64");
+      if (buffer.length === 0) {
+        throw new Error("Generated image payload was empty");
+      }
       fs3.writeFileSync(filePath, buffer);
       return {
         success: true,
@@ -56293,6 +56347,26 @@ var ImageStorage = class {
         error: `Failed to save image: ${errorMessage}`
       };
     }
+  }
+  resolveFilePath(customPath, extension) {
+    if (!customPath) {
+      return path2.join(this.outputDir, `generated-${randomUUID()}${extension}`);
+    }
+    const endsWithSeparator = /[\\/]$/.test(customPath);
+    let resolvedPath = path2.isAbsolute(customPath) ? path2.normalize(customPath) : path2.resolve(this.outputDir, customPath);
+    if (!path2.isAbsolute(customPath)) {
+      const relativeToOutput = path2.relative(this.outputDir, resolvedPath);
+      if (relativeToOutput.startsWith("..") || path2.isAbsolute(relativeToOutput)) {
+        throw new Error("Relative outputPath cannot escape the configured output directory");
+      }
+    }
+    const pathIsDirectory = endsWithSeparator || fs3.existsSync(resolvedPath) && fs3.statSync(resolvedPath).isDirectory();
+    if (pathIsDirectory) {
+      resolvedPath = path2.join(resolvedPath, `generated-${randomUUID()}${extension}`);
+    } else if (!path2.extname(resolvedPath)) {
+      resolvedPath = `${resolvedPath}${extension}`;
+    }
+    return resolvedPath;
   }
   getExtensionFromMimeType(mimeType) {
     const mimeToExt = {
@@ -56308,26 +56382,327 @@ var ImageStorage = class {
   }
 };
 
+// build/runtime.js
+var LOG_LEVEL_PRIORITY = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3
+};
+function formatErrorMessage(error2) {
+  if (error2 instanceof Error) {
+    return error2.message;
+  }
+  return String(error2);
+}
+function parseLogLevel2(value) {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "error" || normalized === "warn" || normalized === "info" || normalized === "debug") {
+    return normalized;
+  }
+  return DEFAULT_LOG_LEVEL;
+}
+function parseRequestTimeoutMs(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_REQUEST_TIMEOUT_MS;
+  }
+  return Math.floor(parsed);
+}
+function getFallbackImageModels(configuredDefaultModel) {
+  return [.../* @__PURE__ */ new Set([configuredDefaultModel, ...FALLBACK_IMAGE_MODELS])];
+}
+function resolveDefaultModel(availableModels, configuredDefaultModel) {
+  if (availableModels.includes(configuredDefaultModel)) {
+    return configuredDefaultModel;
+  }
+  return availableModels[0] || configuredDefaultModel;
+}
+function createRuntimeConfig(env = process.env) {
+  return {
+    apiKey: env.GEMINI_API_KEY?.trim() ?? "",
+    defaultModel: env.GEMINI_DEFAULT_MODEL?.trim() || FALLBACK_IMAGE_MODELS[0],
+    outputDirectory: env.IMAGE_OUTPUT_DIR?.trim() || "./generated-images",
+    requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
+    logLevel: parseLogLevel2(env.MEDIA_PIPELINE_LOG_LEVEL)
+  };
+}
+function serializeMeta(meta) {
+  if (meta === void 0) {
+    return "";
+  }
+  try {
+    return ` ${JSON.stringify(meta)}`;
+  } catch {
+    return " [meta-unserializable]";
+  }
+}
+function createLogger(component, configuredLevel) {
+  const level = parseLogLevel2(configuredLevel);
+  function emit(targetLevel, message, meta) {
+    if (LOG_LEVEL_PRIORITY[targetLevel] > LOG_LEVEL_PRIORITY[level]) {
+      return;
+    }
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    console.error(`[${timestamp}] [media-pipeline] [${component}] [${targetLevel}] ${message}${serializeMeta(meta)}`);
+  }
+  return {
+    error(message, meta) {
+      emit("error", message, meta);
+    },
+    warn(message, meta) {
+      emit("warn", message, meta);
+    },
+    info(message, meta) {
+      emit("info", message, meta);
+    },
+    debug(message, meta) {
+      emit("debug", message, meta);
+    }
+  };
+}
+
+// build/media-pipeline-service.js
+var MediaPipelineService = class {
+  config;
+  logger;
+  modelCacheTtlMs;
+  geminiClient;
+  imageStorage;
+  cachedModelContext = null;
+  constructor(config2, logger2, modelCacheTtlMs = 15 * 60 * 1e3) {
+    this.config = config2;
+    this.logger = logger2;
+    this.modelCacheTtlMs = modelCacheTtlMs;
+    this.geminiClient = new GeminiImageClient({
+      apiKey: config2.apiKey,
+      defaultModel: config2.defaultModel,
+      outputDirectory: config2.outputDirectory,
+      requestTimeoutMs: config2.requestTimeoutMs
+    });
+    this.imageStorage = new ImageStorage(config2.outputDirectory);
+  }
+  getOutputDirectory() {
+    return this.imageStorage.getOutputDirectory();
+  }
+  async getModelContext() {
+    const now = Date.now();
+    if (this.cachedModelContext && this.cachedModelContext.expiresAt > now) {
+      return this.cachedModelContext.value;
+    }
+    const warnings = [];
+    let availableModels;
+    try {
+      this.logger.debug("Refreshing image model list from Gemini API");
+      const discoveredModels = await fetchImageModels(this.config.apiKey, this.config.requestTimeoutMs);
+      availableModels = discoveredModels.length > 0 ? discoveredModels : getFallbackImageModels(this.config.defaultModel);
+      if (discoveredModels.length === 0) {
+        warnings.push("Gemini model discovery returned no image-capable models; using fallback defaults.");
+      }
+    } catch (error2) {
+      const errorMessage = formatErrorMessage(error2);
+      this.logger.warn("Failed to refresh image model list; using fallback defaults", {
+        error: errorMessage
+      });
+      warnings.push(`Gemini model discovery failed; using fallback defaults. ${errorMessage}`);
+      availableModels = getFallbackImageModels(this.config.defaultModel);
+    }
+    const defaultModel = resolveDefaultModel(availableModels, this.config.defaultModel);
+    if (defaultModel !== this.config.defaultModel) {
+      warnings.push(`Configured default model "${this.config.defaultModel}" is unavailable; using "${defaultModel}" instead.`);
+    }
+    const context = {
+      availableModels,
+      defaultModel,
+      warnings
+    };
+    this.cachedModelContext = {
+      value: context,
+      expiresAt: now + this.modelCacheTtlMs
+    };
+    return context;
+  }
+  async createAsset(request) {
+    const startedAt = Date.now();
+    const modelContext = await this.getModelContext();
+    const warnings = [...modelContext.warnings];
+    if (request.model && !modelContext.availableModels.includes(request.model)) {
+      return {
+        success: false,
+        errorCode: "INVALID_MODEL",
+        error: `Invalid model: ${request.model}. Available image models: ${modelContext.availableModels.join(", ")}`,
+        outputDirectory: this.imageStorage.getOutputDirectory(),
+        warnings
+      };
+    }
+    const selectedModel = request.model || modelContext.defaultModel;
+    this.logger.info("Generating image", {
+      model: selectedModel,
+      aspectRatio: request.aspectRatio || "1:1",
+      hasCustomOutputPath: Boolean(request.outputPath)
+    });
+    const generated = await this.geminiClient.generateImage({
+      prompt: request.prompt,
+      aspectRatio: request.aspectRatio,
+      model: selectedModel,
+      timeoutMs: this.config.requestTimeoutMs
+    });
+    if (!generated.success || !generated.base64Data || !generated.mimeType) {
+      return {
+        success: false,
+        errorCode: generated.errorCode || "IMAGE_GENERATION_FAILED",
+        error: generated.error || "Image generation failed",
+        prompt: request.prompt,
+        aspectRatio: request.aspectRatio || "1:1",
+        model: selectedModel,
+        outputDirectory: this.imageStorage.getOutputDirectory(),
+        warnings
+      };
+    }
+    const saved = this.imageStorage.saveImage(generated.base64Data, request.outputPath, generated.mimeType);
+    if (!saved.success || !saved.filePath) {
+      return {
+        success: false,
+        errorCode: "FILE_SAVE_FAILED",
+        error: saved.error || "Failed to save generated image",
+        prompt: request.prompt,
+        aspectRatio: request.aspectRatio || "1:1",
+        model: selectedModel,
+        mimeType: generated.mimeType,
+        outputDirectory: this.imageStorage.getOutputDirectory(),
+        warnings
+      };
+    }
+    const durationMs = Date.now() - startedAt;
+    this.logger.info("Image generated successfully", {
+      filePath: saved.filePath,
+      model: selectedModel,
+      durationMs
+    });
+    return {
+      success: true,
+      filePath: saved.filePath,
+      mimeType: generated.mimeType,
+      prompt: request.prompt,
+      aspectRatio: request.aspectRatio || "1:1",
+      model: selectedModel,
+      outputDirectory: this.imageStorage.getOutputDirectory(),
+      warnings: warnings.length > 0 ? warnings : void 0
+    };
+  }
+};
+
+// build/schemas.js
+var createAssetArgsSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1, "Prompt is required").max(1e4, "Prompt must be at most 10000 characters long").describe("Detailed description of the image to generate"),
+  outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path (optional)"),
+  aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
+  model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation")
+});
+var createAssetInputSchema = {
+  type: "object",
+  properties: {
+    prompt: {
+      type: "string",
+      description: "Detailed description of the image to generate. Be specific about style, composition, colors, subject matter, and atmosphere for best results.",
+      minLength: 1,
+      maxLength: 1e4
+    },
+    outputPath: {
+      type: "string",
+      description: "Optional custom output file path. Relative paths stay inside the configured output directory; absolute paths are allowed for local workflows.",
+      minLength: 1,
+      maxLength: 1024
+    },
+    aspectRatio: {
+      type: "string",
+      enum: [...ASPECT_RATIOS],
+      description: "Aspect ratio for the generated image. Use 16:9 for hero images/headers, 1:1 for thumbnails/social, 9:16 for mobile/stories. Default: 1:1."
+    },
+    model: {
+      type: "string",
+      description: "Optional Gemini model name for image generation. If omitted, the configured default model is used when available.",
+      minLength: 1,
+      maxLength: 256
+    }
+  },
+  required: ["prompt"]
+};
+var createAssetOutputSchema = {
+  type: "object",
+  properties: {
+    success: {
+      type: "boolean",
+      description: "Whether the image generation request completed successfully."
+    },
+    filePath: {
+      type: "string",
+      description: "Absolute path to the saved image file."
+    },
+    mimeType: {
+      type: "string",
+      description: "MIME type of the generated image."
+    },
+    prompt: {
+      type: "string",
+      description: "Prompt used for the generation request."
+    },
+    aspectRatio: {
+      type: "string",
+      enum: [...ASPECT_RATIOS],
+      description: "Aspect ratio used for the image."
+    },
+    model: {
+      type: "string",
+      description: "Gemini model used for generation."
+    },
+    outputDirectory: {
+      type: "string",
+      description: "Configured base output directory for relative file paths."
+    },
+    error: {
+      type: "string",
+      description: "Human-readable error message when success is false."
+    },
+    errorCode: {
+      type: "string",
+      description: "Stable error code for machine-readable handling."
+    },
+    warnings: {
+      type: "array",
+      description: "Non-fatal warnings associated with the request.",
+      items: {
+        type: "string"
+      }
+    }
+  },
+  required: ["success"]
+};
+
 // build/index.js
-var GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-var DEFAULT_MODEL = process.env.GEMINI_DEFAULT_MODEL || "gemini-3-pro-image-preview";
-var OUTPUT_DIR = process.env.IMAGE_OUTPUT_DIR || "./generated-images";
-if (!GEMINI_API_KEY) {
-  console.error("Error: GEMINI_API_KEY environment variable is required");
+var runtimeConfig = createRuntimeConfig();
+var logger = createLogger("server", runtimeConfig.logLevel);
+if (!runtimeConfig.apiKey) {
+  logger.error("GEMINI_API_KEY environment variable is required");
   process.exit(1);
 }
-var geminiClient = new GeminiImageClient({
-  apiKey: GEMINI_API_KEY,
-  defaultModel: DEFAULT_MODEL,
-  outputDirectory: OUTPUT_DIR
-});
-var imageStorage = new ImageStorage(OUTPUT_DIR);
-var generateImageSchema = external_exports.object({
-  prompt: external_exports.string().describe("Detailed description of the image to generate"),
-  outputPath: external_exports.string().optional().describe("Custom output file path (optional)"),
-  aspectRatio: external_exports.enum(["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"]).optional().describe("Image aspect ratio (default: 1:1)"),
-  model: external_exports.enum(["gemini-3-pro-image-preview", "gemini-2.5-flash-image"]).optional().describe("Model to use for generation")
-});
+var mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
+function buildToolText(result) {
+  if (!result.success) {
+    return result.error || "Unknown error";
+  }
+  const lines = [
+    "Image generated successfully!",
+    "",
+    `File saved to: ${result.filePath}`,
+    `Aspect ratio: ${result.aspectRatio}`,
+    `Model: ${result.model}`
+  ];
+  if (result.warnings && result.warnings.length > 0) {
+    lines.push("", `Warnings: ${result.warnings.join(" | ")}`);
+  }
+  return lines.join("\n");
+}
 var server = new Server({
   name: "media-pipeline",
   version: "1.0.0"
@@ -56337,35 +56712,14 @@ var server = new Server({
   }
 });
 server.setRequestHandler(ListToolsRequestSchema, async () => {
+  const modelContext = await mediaPipelineService.getModelContext();
   return {
     tools: [
       {
         name: "create_asset",
-        description: `Generate an image using Google Gemini AI. Provide a detailed prompt describing the desired image. The image will be saved to disk and the file path returned. Default model: ${DEFAULT_MODEL}`,
-        inputSchema: {
-          type: "object",
-          properties: {
-            prompt: {
-              type: "string",
-              description: "Detailed description of the image to generate. Be specific about style, composition, colors, subject matter, and atmosphere for best results."
-            },
-            outputPath: {
-              type: "string",
-              description: "Optional custom file path for the output. If not provided, a unique filename will be generated in the output directory."
-            },
-            aspectRatio: {
-              type: "string",
-              enum: ["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"],
-              description: "Aspect ratio for the generated image. Use 16:9 for hero images/headers, 1:1 for thumbnails/social, 9:16 for mobile/stories. Default: 1:1"
-            },
-            model: {
-              type: "string",
-              enum: ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"],
-              description: "Model to use. gemini-3-pro-image-preview for higher quality, gemini-2.5-flash-image for faster generation."
-            }
-          },
-          required: ["prompt"]
-        }
+        description: `Generate an image using Google Gemini AI, save it locally, and return the absolute output path. Default model: ${modelContext.defaultModel}`,
+        inputSchema: createAssetInputSchema,
+        outputSchema: createAssetOutputSchema
       }
     ]
   };
@@ -56373,57 +56727,34 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "create_asset") {
     try {
-      const args = generateImageSchema.parse(request.params.arguments);
-      const result = await geminiClient.generateImage({
-        prompt: args.prompt,
-        aspectRatio: args.aspectRatio,
-        model: args.model
-      });
-      if (!result.success || !result.base64Data) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Image generation failed: ${result.error || "Unknown error"}`
-            }
-          ]
-        };
-      }
-      const saveResult = imageStorage.saveImage(result.base64Data, args.outputPath, result.mimeType);
-      if (!saveResult.success || !saveResult.filePath) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Failed to save image: ${saveResult.error || "Unknown error"}`
-            }
-          ]
-        };
-      }
+      const args = createAssetArgsSchema.parse(request.params.arguments);
+      const result = await mediaPipelineService.createAsset(args);
       return {
+        isError: !result.success,
+        structuredContent: result,
         content: [
           {
             type: "text",
-            text: `Image generated successfully!
-
-File saved to: ${saveResult.filePath}
-
-Prompt: "${args.prompt}"
-Aspect ratio: ${args.aspectRatio || "1:1"}
-Model: ${args.model || DEFAULT_MODEL}`
+            text: result.success ? buildToolText(result) : `Image generation failed: ${result.error || "Unknown error"}`
           }
         ]
       };
     } catch (error2) {
-      const errorMessage = error2 instanceof Error ? error2.message : String(error2);
+      const errorMessage = formatErrorMessage(error2);
+      logger.warn("Tool execution failed", { error: errorMessage });
+      const structuredContent = {
+        success: false,
+        errorCode: "VALIDATION_ERROR",
+        error: `Error generating image: ${errorMessage}`,
+        outputDirectory: mediaPipelineService.getOutputDirectory()
+      };
       return {
         isError: true,
+        structuredContent,
         content: [
           {
             type: "text",
-            text: `Error generating image: ${errorMessage}`
+            text: structuredContent.error
           }
         ]
       };
@@ -56431,6 +56762,12 @@ Model: ${args.model || DEFAULT_MODEL}`
   }
   return {
     isError: true,
+    structuredContent: {
+      success: false,
+      errorCode: "UNKNOWN_TOOL",
+      error: `Unknown tool: ${request.params.name}`,
+      outputDirectory: mediaPipelineService.getOutputDirectory()
+    },
     content: [
       {
         type: "text",
@@ -56440,14 +56777,23 @@ Model: ${args.model || DEFAULT_MODEL}`
   };
 });
 async function main() {
+  process.on("uncaughtException", (error2) => {
+    logger.error("Uncaught exception", { error: formatErrorMessage(error2) });
+    process.exit(1);
+  });
+  process.on("unhandledRejection", (reason) => {
+    logger.error("Unhandled promise rejection", { error: formatErrorMessage(reason) });
+  });
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Media Pipeline MCP Server started");
-  console.error(`Default model: ${DEFAULT_MODEL}`);
-  console.error(`Output directory: ${imageStorage.getOutputDirectory()}`);
+  logger.info("Media Pipeline MCP Server started", {
+    defaultModel: runtimeConfig.defaultModel,
+    outputDirectory: mediaPipelineService.getOutputDirectory(),
+    requestTimeoutMs: runtimeConfig.requestTimeoutMs
+  });
 }
 main().catch((error2) => {
-  console.error("Server error:", error2);
+  logger.error("Server startup failed", { error: formatErrorMessage(error2) });
   process.exit(1);
 });
 /*! Bundled license information:

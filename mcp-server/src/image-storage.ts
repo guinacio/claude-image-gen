@@ -8,6 +8,7 @@ export class ImageStorage {
 
   constructor(outputDir: string) {
     this.outputDir = path.resolve(outputDir);
+    this.ensureDirectory(this.outputDir);
   }
 
   private ensureDirectory(dirPath: string): void {
@@ -24,14 +25,7 @@ export class ImageStorage {
     try {
       // Determine file extension from mime type
       const extension = this.getExtensionFromMimeType(mimeType);
-
-      // Generate filename if not provided
-      const filename = customPath || `generated-${randomUUID()}${extension}`;
-
-      // Resolve full path
-      const filePath = path.isAbsolute(filename)
-        ? filename
-        : path.join(this.outputDir, filename);
+      const filePath = this.resolveFilePath(customPath, extension);
 
       // Ensure parent directory exists
       const parentDir = path.dirname(filePath);
@@ -39,6 +33,9 @@ export class ImageStorage {
 
       // Decode base64 and write to file
       const buffer = Buffer.from(base64Data, "base64");
+      if (buffer.length === 0) {
+        throw new Error("Generated image payload was empty");
+      }
       fs.writeFileSync(filePath, buffer);
 
       return {
@@ -53,6 +50,44 @@ export class ImageStorage {
         error: `Failed to save image: ${errorMessage}`,
       };
     }
+  }
+
+  private resolveFilePath(customPath: string | undefined, extension: string): string {
+    if (!customPath) {
+      return path.join(this.outputDir, `generated-${randomUUID()}${extension}`);
+    }
+
+    const endsWithSeparator = /[\\/]$/.test(customPath);
+    let resolvedPath = path.isAbsolute(customPath)
+      ? path.normalize(customPath)
+      : path.resolve(this.outputDir, customPath);
+
+    if (!path.isAbsolute(customPath)) {
+      const relativeToOutput = path.relative(this.outputDir, resolvedPath);
+      if (
+        relativeToOutput.startsWith("..") ||
+        path.isAbsolute(relativeToOutput)
+      ) {
+        throw new Error(
+          "Relative outputPath cannot escape the configured output directory"
+        );
+      }
+    }
+
+    const pathIsDirectory =
+      endsWithSeparator ||
+      (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory());
+
+    if (pathIsDirectory) {
+      resolvedPath = path.join(
+        resolvedPath,
+        `generated-${randomUUID()}${extension}`
+      );
+    } else if (!path.extname(resolvedPath)) {
+      resolvedPath = `${resolvedPath}${extension}`;
+    }
+
+    return resolvedPath;
   }
 
   private getExtensionFromMimeType(mimeType: string): string {

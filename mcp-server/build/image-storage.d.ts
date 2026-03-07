@@ -4,6 +4,7 @@ export declare class ImageStorage {
     constructor(outputDir: string);
     private ensureDirectory;
     saveImage(base64Data: string, customPath?: string, mimeType?: string): SavedImageResult;
+    private resolveFilePath;
     private getExtensionFromMimeType;
     getOutputDirectory(): string;
 }

@@ -1,25 +1,42 @@
 {
-  "manifest_version": "0.2",
+  "manifest_version": "0.3",
   "name": "media-pipeline",
   "display_name": "Media Pipeline - Gemini Image Generation",
   "version": "1.0.0",
-  "icon": "icon.png",
-  "description": "Generate AI images using Google Gemini. Create hero images, thumbnails, and visual content from text prompts.",
-  "long_description": "A media asset generation server powered by Google Gemini AI. Supports multiple aspect ratios (1:1, 16:9, 9:16, etc.) and models for quality vs speed trade-offs. Images are saved to disk with file paths returned for easy integration into websites, presentations, and applications.",
+  "description": "Generate AI images locally through a bundled Gemini-powered MCP server and standalone CLI.",
+  "long_description": "A production-oriented MCP Bundle for local image generation workflows with Google Gemini. The bundle exposes a create_asset MCP tool, validates requests defensively, uses bundled Node entry points for both the MCP server and the standalone CLI, and saves generated images directly to local disk for easy use in websites, documents, and presentations.",
   "author": {
-    "name": "Claude Image Gen"
+    "name": "Claude Image Gen",
+    "url": "https://github.com/guinacio/claude-image-gen"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guinacio/claude-image-gen.git"
+  },
+  "homepage": "https://github.com/guinacio/claude-image-gen",
+  "documentation": "https://github.com/guinacio/claude-image-gen#readme",
+  "support": "https://github.com/guinacio/claude-image-gen/issues",
+  "icon": "icon.png",
   "license": "MIT",
+  "keywords": [
+    "gemini",
+    "image-generation",
+    "mcp",
+    "local",
+    "media"
+  ],
   "server": {
     "type": "node",
-    "entry_point": "build/index.js",
+    "entry_point": "build/bundle.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/build/index.js"],
+      "args": ["${__dirname}/build/bundle.js"],
       "env": {
         "GEMINI_API_KEY": "${user_config.GEMINI_API_KEY}",
         "GEMINI_DEFAULT_MODEL": "${user_config.GEMINI_DEFAULT_MODEL}",
-        "IMAGE_OUTPUT_DIR": "${user_config.IMAGE_OUTPUT_DIR}"
+        "IMAGE_OUTPUT_DIR": "${user_config.IMAGE_OUTPUT_DIR}",
+        "GEMINI_REQUEST_TIMEOUT_MS": "${user_config.GEMINI_REQUEST_TIMEOUT_MS}",
+        "MEDIA_PIPELINE_LOG_LEVEL": "${user_config.MEDIA_PIPELINE_LOG_LEVEL}"
       }
     }
   },
@@ -34,23 +51,44 @@
     "GEMINI_DEFAULT_MODEL": {
       "type": "string",
       "title": "Default Model",
-      "description": "Model to use for image generation (gemini-3-pro-image-preview for quality, gemini-2.5-flash-image for speed)",
+      "description": "Preferred model for image generation. Available models are fetched dynamically from the Gemini API at runtime.",
       "default": "gemini-3-pro-image-preview"
     },
     "IMAGE_OUTPUT_DIR": {
       "type": "directory",
       "title": "Output Directory",
       "description": "Directory where generated images will be saved",
-      "default": "./generated-images"
+      "default": "${HOME}/generated-images"
+    },
+    "GEMINI_REQUEST_TIMEOUT_MS": {
+      "type": "number",
+      "title": "Request Timeout (ms)",
+      "description": "Maximum time to wait for Gemini image generation requests",
+      "default": 60000,
+      "min": 1000,
+      "max": 300000
+    },
+    "MEDIA_PIPELINE_LOG_LEVEL": {
+      "type": "string",
+      "title": "Log Level",
+      "description": "Logging level written to stderr for diagnostics",
+      "default": "info"
     }
   },
   "tools": [
     {
       "name": "create_asset",
-      "description": "Generate an image using Google Gemini AI. Provide a detailed prompt describing the desired image. The image will be saved to disk and the file path returned."
+      "description": "Generate an image with Google Gemini, save it locally, and return the output path plus structured metadata."
     }
   ],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
   "privacy_policies": [
-    "https://ai.google.dev/gemini-api/terms"
+    "https://policies.google.com/privacy"
   ]
 }
+

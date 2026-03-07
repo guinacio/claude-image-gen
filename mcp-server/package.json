@@ -1,6 +1,6 @@
 {
   "name": "media-pipeline-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for media asset processing",
   "type": "module",
   "main": "build/bundle.js",

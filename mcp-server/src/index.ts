@@ -59,7 +59,7 @@ function buildToolText(result: {
 const server = new Server(
   {
     name: "media-pipeline",
-    version: "1.0.0",
+    version: "1.0.1",
   },
   {
     capabilities: {

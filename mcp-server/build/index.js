@@ -15,7 +15,7 @@ const mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
 // Create MCP server
 const server = new Server({
     name: "media-pipeline",
-    version: "1.0.1",
+    version: "1.0.2",
 }, {
     capabilities: {
         tools: {},

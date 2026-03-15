@@ -31,7 +31,7 @@ const mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
 const server = new Server(
   {
     name: "media-pipeline",
-    version: "1.0.1",
+    version: "1.0.2",
   },
   {
     capabilities: {

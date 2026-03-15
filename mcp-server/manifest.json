@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "media-pipeline",
   "display_name": "Media Pipeline - Gemini Image Generation",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Generate AI images locally through a bundled Gemini-powered MCP server and standalone CLI.",
   "long_description": "A production-oriented MCP Bundle for local image generation workflows with Google Gemini. The bundle exposes a create_asset MCP tool, validates requests defensively, uses bundled Node entry points for both the MCP server and the standalone CLI, and saves generated images directly to local disk for easy use in websites, documents, and presentations.",
   "author": {
@@ -57,8 +57,7 @@
     "IMAGE_OUTPUT_DIR": {
       "type": "directory",
       "title": "Output Directory",
-      "description": "Directory where generated images will be saved",
-      "default": "${HOME}/generated-images"
+      "description": "Directory where generated images will be saved. Leave blank to use a generated-images folder in your home directory."
     },
     "GEMINI_REQUEST_TIMEOUT_MS": {
       "type": "number",

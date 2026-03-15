@@ -69,14 +69,16 @@ export class GeminiImageClient {
             if (!candidates || candidates.length === 0) {
                 return {
                     success: false,
-                    error: "No candidates in response",
+                    errorCode: "GEMINI_EMPTY_RESPONSE",
+                    error: "Gemini did not return a generated image.",
                 };
             }
             const parts = candidates[0].content?.parts;
             if (!parts) {
                 return {
                     success: false,
-                    error: "No content parts in response",
+                    errorCode: "GEMINI_EMPTY_RESPONSE",
+                    error: "Gemini did not return a generated image.",
                 };
             }
             // Find the image part in the response
@@ -91,7 +93,8 @@ export class GeminiImageClient {
             }
             return {
                 success: false,
-                error: "No image data found in response",
+                errorCode: "GEMINI_EMPTY_RESPONSE",
+                error: "Gemini did not return a generated image.",
             };
         }
         catch (error) {
@@ -100,8 +103,9 @@ export class GeminiImageClient {
                 success: false,
                 errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "GEMINI_API_ERROR",
                 error: controller.signal.aborted
-                    ? `Gemini request timed out after ${timeoutMs}ms`
-                    : `Gemini API error: ${errorMessage}`,
+                    ? `Image generation timed out after ${timeoutMs}ms.`
+                    : "Gemini image generation failed.",
+                internalError: errorMessage,
             };
         }
         finally {

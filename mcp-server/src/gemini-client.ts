@@ -47,8 +47,8 @@ export async function fetchImageModels(
 }
 
 export class GeminiImageClient {
-  private ai: GoogleGenAI;
-  private config: GeminiConfig;
+  private readonly ai: GoogleGenAI;
+  private readonly config: GeminiConfig;
 
   constructor(config: GeminiConfig) {
     this.ai = new GoogleGenAI({ apiKey: config.apiKey });
@@ -90,7 +90,8 @@ export class GeminiImageClient {
       if (!candidates || candidates.length === 0) {
         return {
           success: false,
-          error: "No candidates in response",
+          errorCode: "GEMINI_EMPTY_RESPONSE",
+          error: "Gemini did not return a generated image.",
         };
       }
 
@@ -98,7 +99,8 @@ export class GeminiImageClient {
       if (!parts) {
         return {
           success: false,
-          error: "No content parts in response",
+          errorCode: "GEMINI_EMPTY_RESPONSE",
+          error: "Gemini did not return a generated image.",
         };
       }
 
@@ -115,7 +117,8 @@ export class GeminiImageClient {
 
       return {
         success: false,
-        error: "No image data found in response",
+        errorCode: "GEMINI_EMPTY_RESPONSE",
+        error: "Gemini did not return a generated image.",
       };
     } catch (error) {
       const errorMessage =
@@ -124,8 +127,9 @@ export class GeminiImageClient {
         success: false,
         errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "GEMINI_API_ERROR",
         error: controller.signal.aborted
-          ? `Gemini request timed out after ${timeoutMs}ms`
-          : `Gemini API error: ${errorMessage}`,
+          ? `Image generation timed out after ${timeoutMs}ms.`
+          : "Gemini image generation failed.",
+        internalError: errorMessage,
       };
     } finally {
       clearTimeout(timeoutId);

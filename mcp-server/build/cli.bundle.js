@@ -38566,14 +38566,16 @@ var GeminiImageClient = class {
       if (!candidates || candidates.length === 0) {
         return {
           success: false,
-          error: "No candidates in response"
+          errorCode: "GEMINI_EMPTY_RESPONSE",
+          error: "Gemini did not return a generated image."
         };
       }
       const parts = candidates[0].content?.parts;
       if (!parts) {
         return {
           success: false,
-          error: "No content parts in response"
+          errorCode: "GEMINI_EMPTY_RESPONSE",
+          error: "Gemini did not return a generated image."
         };
       }
       for (const part of parts) {
@@ -38587,14 +38589,16 @@ var GeminiImageClient = class {
       }
       return {
         success: false,
-        error: "No image data found in response"
+        errorCode: "GEMINI_EMPTY_RESPONSE",
+        error: "Gemini did not return a generated image."
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "GEMINI_API_ERROR",
-        error: controller.signal.aborted ? `Gemini request timed out after ${timeoutMs}ms` : `Gemini API error: ${errorMessage}`
+        error: controller.signal.aborted ? `Image generation timed out after ${timeoutMs}ms.` : "Gemini image generation failed.",
+        internalError: errorMessage
       };
     } finally {
       clearTimeout(timeoutId);
@@ -38606,11 +38610,14 @@ var GeminiImageClient = class {
 import * as fs3 from "node:fs";
 import * as path2 from "node:path";
 import { randomUUID } from "node:crypto";
-var ImageStorage = class {
+var ImageStorage = class _ImageStorage {
   outputDir;
+  outputDirRealPath;
+  static OUTPUT_PATH_NOT_ALLOWED_MESSAGE = "outputPath must stay within the configured output directory";
   constructor(outputDir) {
     this.outputDir = path2.resolve(outputDir);
     this.ensureDirectory(this.outputDir);
+    this.outputDirRealPath = this.getRealPath(this.outputDir);
   }
   ensureDirectory(dirPath) {
     if (!fs3.existsSync(dirPath)) {
@@ -38634,9 +38641,19 @@ var ImageStorage = class {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage === _ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE) {
+        return {
+          success: false,
+          errorCode: "OUTPUT_PATH_NOT_ALLOWED",
+          error: _ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE,
+          internalError: errorMessage
+        };
+      }
       return {
         success: false,
-        error: `Failed to save image: ${errorMessage}`
+        errorCode: "FILE_SAVE_FAILED",
+        error: "Failed to save generated image.",
+        internalError: errorMessage
       };
     }
   }
@@ -38646,19 +38663,37 @@ var ImageStorage = class {
     }
     const endsWithSeparator = /[\\/]$/.test(customPath);
     let resolvedPath = path2.isAbsolute(customPath) ? path2.normalize(customPath) : path2.resolve(this.outputDir, customPath);
-    if (!path2.isAbsolute(customPath)) {
-      const relativeToOutput = path2.relative(this.outputDir, resolvedPath);
-      if (relativeToOutput.startsWith("..") || path2.isAbsolute(relativeToOutput)) {
-        throw new Error("Relative outputPath cannot escape the configured output directory");
-      }
-    }
+    this.assertPathWithinOutputDirectory(resolvedPath);
     const pathIsDirectory = endsWithSeparator || fs3.existsSync(resolvedPath) && fs3.statSync(resolvedPath).isDirectory();
     if (pathIsDirectory) {
       resolvedPath = path2.join(resolvedPath, `generated-${randomUUID()}${extension}`);
     } else if (!path2.extname(resolvedPath)) {
       resolvedPath = `${resolvedPath}${extension}`;
     }
+    this.assertPathWithinOutputDirectory(resolvedPath);
     return resolvedPath;
+  }
+  assertPathWithinOutputDirectory(targetPath) {
+    const nearestExistingPath = this.findNearestExistingPath(targetPath);
+    const resolvedRoot = this.getRealPath(nearestExistingPath);
+    const relativeToOutput = path2.relative(this.outputDirRealPath, resolvedRoot);
+    if (relativeToOutput.startsWith("..") || path2.isAbsolute(relativeToOutput)) {
+      throw new Error(_ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE);
+    }
+  }
+  findNearestExistingPath(targetPath) {
+    let currentPath = path2.resolve(targetPath);
+    while (!fs3.existsSync(currentPath)) {
+      const parentPath = path2.dirname(currentPath);
+      if (parentPath === currentPath) {
+        break;
+      }
+      currentPath = parentPath;
+    }
+    return currentPath;
+  }
+  getRealPath(targetPath) {
+    return fs3.realpathSync.native?.(targetPath) ?? fs3.realpathSync(targetPath);
   }
   getExtensionFromMimeType(mimeType) {
     const mimeToExt = {
@@ -38673,6 +38708,9 @@ var ImageStorage = class {
     return this.outputDir;
   }
 };
+
+// build/media-pipeline-service.js
+import { pathToFileURL } from "node:url";
 
 // build/runtime.js
 var LOG_LEVEL_PRIORITY = {
@@ -38769,7 +38807,6 @@ var MediaPipelineService = class {
     this.geminiClient = new GeminiImageClient({
       apiKey: config.apiKey,
       defaultModel: config.defaultModel,
-      outputDirectory: config.outputDirectory,
       requestTimeoutMs: config.requestTimeoutMs
     });
     this.imageStorage = new ImageStorage(config.outputDirectory);
@@ -38796,7 +38833,7 @@ var MediaPipelineService = class {
       this.logger.warn("Failed to refresh image model list; using fallback defaults", {
         error: errorMessage
       });
-      warnings.push(`Gemini model discovery failed; using fallback defaults. ${errorMessage}`);
+      warnings.push("Gemini model discovery failed; using fallback defaults.");
       availableModels = getFallbackImageModels(this.config.defaultModel);
     }
     const defaultModel = resolveDefaultModel(availableModels, this.config.defaultModel);
@@ -38840,6 +38877,12 @@ var MediaPipelineService = class {
       timeoutMs: this.config.requestTimeoutMs
     });
     if (!generated.success || !generated.base64Data || !generated.mimeType) {
+      if (generated.internalError) {
+        this.logger.warn("Gemini image generation failed", {
+          error: generated.internalError,
+          errorCode: generated.errorCode
+        });
+      }
       return {
         success: false,
         errorCode: generated.errorCode || "IMAGE_GENERATION_FAILED",
@@ -38853,9 +38896,15 @@ var MediaPipelineService = class {
     }
     const saved = this.imageStorage.saveImage(generated.base64Data, request.outputPath, generated.mimeType);
     if (!saved.success || !saved.filePath) {
+      if (saved.internalError) {
+        this.logger.warn("Saving generated image failed", {
+          error: saved.internalError,
+          errorCode: saved.errorCode
+        });
+      }
       return {
         success: false,
-        errorCode: "FILE_SAVE_FAILED",
+        errorCode: saved.errorCode || "FILE_SAVE_FAILED",
         error: saved.error || "Failed to save generated image",
         prompt: request.prompt,
         aspectRatio: request.aspectRatio || "1:1",
@@ -38874,6 +38923,7 @@ var MediaPipelineService = class {
     return {
       success: true,
       filePath: saved.filePath,
+      resourceUri: pathToFileURL(saved.filePath).href,
       mimeType: generated.mimeType,
       prompt: request.prompt,
       aspectRatio: request.aspectRatio || "1:1",
@@ -42928,12 +42978,13 @@ var NEVER = INVALID;
 // build/schemas.js
 var createAssetArgsSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1, "Prompt is required").max(1e4, "Prompt must be at most 10000 characters long").describe("Detailed description of the image to generate"),
-  outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path (optional)"),
+  outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path inside the configured output directory"),
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
   model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation")
-});
+}).strict();
 var createAssetInputSchema = {
   type: "object",
+  additionalProperties: false,
   properties: {
     prompt: {
       type: "string",
@@ -42943,7 +42994,7 @@ var createAssetInputSchema = {
     },
     outputPath: {
       type: "string",
-      description: "Optional custom output file path. Relative paths stay inside the configured output directory; absolute paths are allowed for local workflows.",
+      description: "Optional custom output file path inside the configured output directory. Both relative and absolute paths must stay within that directory.",
       minLength: 1,
       maxLength: 1024
     },
@@ -42963,6 +43014,7 @@ var createAssetInputSchema = {
 };
 var createAssetOutputSchema = {
   type: "object",
+  additionalProperties: false,
   properties: {
     success: {
       type: "boolean",
@@ -42971,6 +43023,10 @@ var createAssetOutputSchema = {
     filePath: {
       type: "string",
       description: "Absolute path to the saved image file."
+    },
+    resourceUri: {
+      type: "string",
+      description: "Resource URI for the generated file returned in a resource_link content block."
     },
     mimeType: {
       type: "string",

@@ -1,35 +1,38 @@
 import { z } from "zod";
 import { ASPECT_RATIOS } from "./types.js";
 
-export const createAssetArgsSchema = z.object({
-  prompt: z
-    .string()
-    .trim()
-    .min(1, "Prompt is required")
-    .max(10000, "Prompt must be at most 10000 characters long")
-    .describe("Detailed description of the image to generate"),
-  outputPath: z
-    .string()
-    .trim()
-    .min(1, "outputPath cannot be empty")
-    .max(1024, "outputPath must be at most 1024 characters long")
-    .optional()
-    .describe("Custom output file path (optional)"),
-  aspectRatio: z
-    .enum(ASPECT_RATIOS)
-    .optional()
-    .describe("Image aspect ratio (default: 1:1)"),
-  model: z
-    .string()
-    .trim()
-    .min(1, "model cannot be empty")
-    .max(256, "model must be at most 256 characters long")
-    .optional()
-    .describe("Model to use for generation"),
-});
+export const createAssetArgsSchema = z
+  .object({
+    prompt: z
+      .string()
+      .trim()
+      .min(1, "Prompt is required")
+      .max(10000, "Prompt must be at most 10000 characters long")
+      .describe("Detailed description of the image to generate"),
+    outputPath: z
+      .string()
+      .trim()
+      .min(1, "outputPath cannot be empty")
+      .max(1024, "outputPath must be at most 1024 characters long")
+      .optional()
+      .describe("Custom output file path inside the configured output directory"),
+    aspectRatio: z
+      .enum(ASPECT_RATIOS)
+      .optional()
+      .describe("Image aspect ratio (default: 1:1)"),
+    model: z
+      .string()
+      .trim()
+      .min(1, "model cannot be empty")
+      .max(256, "model must be at most 256 characters long")
+      .optional()
+      .describe("Model to use for generation"),
+  })
+  .strict();
 
 export const createAssetInputSchema = {
   type: "object",
+  additionalProperties: false,
   properties: {
     prompt: {
       type: "string",
@@ -41,7 +44,7 @@ export const createAssetInputSchema = {
     outputPath: {
       type: "string",
       description:
-        "Optional custom output file path. Relative paths stay inside the configured output directory; absolute paths are allowed for local workflows.",
+        "Optional custom output file path inside the configured output directory. Both relative and absolute paths must stay within that directory.",
       minLength: 1,
       maxLength: 1024,
     },
@@ -64,6 +67,7 @@ export const createAssetInputSchema = {
 
 export const createAssetOutputSchema = {
   type: "object",
+  additionalProperties: false,
   properties: {
     success: {
       type: "boolean",
@@ -72,6 +76,10 @@ export const createAssetOutputSchema = {
     filePath: {
       type: "string",
       description: "Absolute path to the saved image file.",
+    },
+    resourceUri: {
+      type: "string",
+      description: "Resource URI for the generated file returned in a resource_link content block.",
     },
     mimeType: {
       type: "string",

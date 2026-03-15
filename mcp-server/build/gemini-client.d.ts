@@ -6,8 +6,8 @@ import type { GenerateImageInput, GenerateImageResult, GeminiConfig } from "./ty
  */
 export declare function fetchImageModels(apiKey: string, timeoutMs?: number): Promise<string[]>;
 export declare class GeminiImageClient {
-    private ai;
-    private config;
+    private readonly ai;
+    private readonly config;
     constructor(config: GeminiConfig);
     generateImage(input: GenerateImageInput): Promise<GenerateImageResult>;
 }

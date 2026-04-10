@@ -1,6 +1,7 @@
 import { z } from "zod";
 export declare const createAssetArgsSchema: z.ZodObject<{
     prompt: z.ZodString;
+    referenceImages: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     outputPath: z.ZodOptional<z.ZodString>;
     aspectRatio: z.ZodOptional<z.ZodEnum<["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"]>>;
     model: z.ZodOptional<z.ZodString>;
@@ -8,11 +9,13 @@ export declare const createAssetArgsSchema: z.ZodObject<{
     prompt: string;
     aspectRatio?: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "16:9" | "9:16" | undefined;
     model?: string | undefined;
+    referenceImages?: string[] | undefined;
     outputPath?: string | undefined;
 }, {
     prompt: string;
     aspectRatio?: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "16:9" | "9:16" | undefined;
     model?: string | undefined;
+    referenceImages?: string[] | undefined;
     outputPath?: string | undefined;
 }>;
 export declare const createAssetInputSchema: {
@@ -23,6 +26,16 @@ export declare const createAssetInputSchema: {
             readonly description: "Detailed description of the image to generate. Be specific about style, composition, colors, subject matter, and atmosphere for best results.";
             readonly minLength: 1;
             readonly maxLength: 10000;
+        };
+        readonly referenceImages: {
+            readonly type: "array";
+            readonly description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Maximum 5 images.";
+            readonly items: {
+                readonly type: "string";
+                readonly minLength: 1;
+                readonly maxLength: 1024;
+            };
+            readonly maxItems: 5;
         };
         readonly outputPath: {
             readonly type: "string";

@@ -7,6 +7,15 @@ export const createAssetArgsSchema = z.object({
         .min(1, "Prompt is required")
         .max(10000, "Prompt must be at most 10000 characters long")
         .describe("Detailed description of the image to generate"),
+    referenceImages: z
+        .array(z
+        .string()
+        .trim()
+        .min(1, "Reference image path cannot be empty")
+        .max(1024, "Reference image path must be at most 1024 characters long"))
+        .max(5, "Maximum 5 reference images")
+        .optional()
+        .describe("Absolute file paths to reference images to include with the prompt for style/character consistency"),
     outputPath: z
         .string()
         .trim()
@@ -34,6 +43,16 @@ export const createAssetInputSchema = {
             description: "Detailed description of the image to generate. Be specific about style, composition, colors, subject matter, and atmosphere for best results.",
             minLength: 1,
             maxLength: 10000,
+        },
+        referenceImages: {
+            type: "array",
+            description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Maximum 5 images.",
+            items: {
+                type: "string",
+                minLength: 1,
+                maxLength: 1024,
+            },
+            maxItems: 5,
         },
         outputPath: {
             type: "string",

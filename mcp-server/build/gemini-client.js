@@ -59,9 +59,27 @@ export class GeminiImageClient {
                     aspectRatio: input.aspectRatio,
                 };
             }
+            // Build contents: if reference images provided, create multi-part content
+            let contents;
+            if (input.referenceImages && input.referenceImages.length > 0) {
+                const parts = [];
+                for (const ref of input.referenceImages) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: ref.mimeType,
+                            data: ref.base64Data,
+                        },
+                    });
+                }
+                parts.push({ text: input.prompt });
+                contents = [{ role: "user", parts }];
+            }
+            else {
+                contents = input.prompt;
+            }
             const response = await this.ai.models.generateContent({
                 model: modelName,
-                contents: input.prompt,
+                contents,
                 config: generationConfig,
             });
             // Extract image from response

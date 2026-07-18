@@ -4,6 +4,7 @@ import type {
   GenerateImageInput,
   GenerateImageResult,
   GeminiConfig,
+  ReferenceImage,
 } from "./types.js";
 
 /**
@@ -79,9 +80,27 @@ export class GeminiImageClient {
         };
       }
 
+      // Build contents: if reference images provided, create multi-part content
+      let contents: string | { role: string; parts: Record<string, unknown>[] }[];
+      if (input.referenceImages && input.referenceImages.length > 0) {
+        const parts: Record<string, unknown>[] = [];
+        for (const ref of input.referenceImages) {
+          parts.push({
+            inlineData: {
+              mimeType: ref.mimeType,
+              data: ref.base64Data,
+            },
+          });
+        }
+        parts.push({ text: input.prompt });
+        contents = [{ role: "user", parts }];
+      } else {
+        contents = input.prompt;
+      }
+
       const response = await this.ai.models.generateContent({
         model: modelName,
-        contents: input.prompt,
+        contents,
         config: generationConfig,
       });
 

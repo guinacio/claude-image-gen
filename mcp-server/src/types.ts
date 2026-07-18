@@ -21,8 +21,15 @@ export const DEFAULT_LOG_LEVEL = "info";
 export type GeminiModel = string;
 export type LogLevel = "error" | "warn" | "info" | "debug";
 
+export interface ReferenceImage {
+  filePath: string;
+  base64Data: string;
+  mimeType: string;
+}
+
 export interface GenerateImageInput {
   prompt: string;
+  referenceImages?: ReferenceImage[];
   outputPath?: string;
   aspectRatio?: AspectRatio;
   model?: GeminiModel;
@@ -60,6 +67,7 @@ export interface RuntimeConfig {
 
 export interface CreateAssetRequest {
   prompt: string;
+  referenceImages?: string[];
   outputPath?: string;
   aspectRatio?: AspectRatio;
   model?: GeminiModel;

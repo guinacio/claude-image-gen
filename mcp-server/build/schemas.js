@@ -16,7 +16,7 @@ export const createAssetArgsSchema = z
         .max(1024, "Reference image path must be at most 1024 characters long"))
         .max(5, "Maximum 5 reference images")
         .optional()
-        .describe("Absolute file paths to reference images to include with the prompt for style/character consistency"),
+        .describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
     outputPath: z
         .string()
         .trim()
@@ -49,7 +49,7 @@ export const createAssetInputSchema = {
         },
         referenceImages: {
             type: "array",
-            description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Maximum 5 images.",
+            description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Supported formats: PNG, JPEG, WebP. Maximum 5 images.",
             items: {
                 type: "string",
                 minLength: 1,

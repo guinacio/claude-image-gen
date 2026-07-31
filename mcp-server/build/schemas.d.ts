@@ -30,7 +30,7 @@ export declare const createAssetInputSchema: {
         };
         readonly referenceImages: {
             readonly type: "array";
-            readonly description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Maximum 5 images.";
+            readonly description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency — the model sees these images alongside the text prompt. Supported formats: PNG, JPEG, WebP. Maximum 5 images.";
             readonly items: {
                 readonly type: "string";
                 readonly minLength: 1;

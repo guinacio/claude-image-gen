@@ -1,7 +1,6 @@
-import * as fs from "fs";
-import * as path from "path";
 import { GeminiImageClient, fetchImageModels } from "./gemini-client.js";
 import { ImageStorage } from "./image-storage.js";
+import { loadReferenceImages } from "./reference-images.js";
 import { pathToFileURL } from "node:url";
 import { formatErrorMessage, getFallbackImageModels, resolveDefaultModel, } from "./runtime.js";
 export class MediaPipelineService {
@@ -88,45 +87,17 @@ export class MediaPipelineService {
         // Load reference images from disk if provided
         let referenceImages;
         if (request.referenceImages && request.referenceImages.length > 0) {
-            referenceImages = [];
-            for (const filePath of request.referenceImages) {
-                try {
-                    const resolved = path.resolve(filePath);
-                    if (!fs.existsSync(resolved)) {
-                        return {
-                            success: false,
-                            errorCode: "REFERENCE_IMAGE_NOT_FOUND",
-                            error: `Reference image not found: ${resolved}`,
-                            outputDirectory: this.imageStorage.getOutputDirectory(),
-                            warnings,
-                        };
-                    }
-                    const data = fs.readFileSync(resolved);
-                    const ext = path.extname(resolved).toLowerCase();
-                    const mimeType = ext === ".jpg" || ext === ".jpeg"
-                        ? "image/jpeg"
-                        : ext === ".png"
-                            ? "image/png"
-                            : ext === ".webp"
-                                ? "image/webp"
-                                : "image/jpeg";
-                    referenceImages.push({
-                        filePath: resolved,
-                        base64Data: data.toString("base64"),
-                        mimeType,
-                    });
-                    this.logger.debug("Loaded reference image", { filePath: resolved, mimeType });
-                }
-                catch (error) {
-                    return {
-                        success: false,
-                        errorCode: "REFERENCE_IMAGE_READ_ERROR",
-                        error: `Failed to read reference image ${filePath}: ${formatErrorMessage(error)}`,
-                        outputDirectory: this.imageStorage.getOutputDirectory(),
-                        warnings,
-                    };
-                }
+            const loaded = loadReferenceImages(request.referenceImages, this.logger);
+            if (!loaded.success) {
+                return {
+                    success: false,
+                    errorCode: loaded.errorCode,
+                    error: loaded.error,
+                    outputDirectory: this.imageStorage.getOutputDirectory(),
+                    warnings,
+                };
             }
+            referenceImages = loaded.images;
         }
         const generated = await this.geminiClient.generateImage({
             prompt: request.prompt,

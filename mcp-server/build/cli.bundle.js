@@ -21908,10 +21908,6 @@ var require_websocket_server = __commonJS({
 // build/cli.js
 import { parseArgs } from "node:util";
 
-// build/media-pipeline-service.js
-import * as fs4 from "fs";
-import * as path4 from "path";
-
 // node_modules/@google/genai/dist/node/index.mjs
 var import_google_auth_library = __toESM(require_src6(), 1);
 import { createWriteStream } from "fs";
@@ -38729,8 +38725,9 @@ var ImageStorage = class _ImageStorage {
   }
 };
 
-// build/media-pipeline-service.js
-import { pathToFileURL } from "node:url";
+// build/reference-images.js
+import * as fs4 from "node:fs";
+import * as path4 from "node:path";
 
 // build/runtime.js
 import os from "node:os";
@@ -38826,7 +38823,62 @@ function createLogger(component, configuredLevel) {
   };
 }
 
+// build/reference-images.js
+var REFERENCE_IMAGE_MIME_TYPES = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp"
+};
+var SUPPORTED_REFERENCE_IMAGE_FORMATS = "PNG, JPEG, or WebP";
+function loadReferenceImages(filePaths, logger) {
+  const images = [];
+  for (const filePath of filePaths) {
+    const resolved = path4.resolve(filePath);
+    const mimeType = REFERENCE_IMAGE_MIME_TYPES[path4.extname(resolved).toLowerCase()];
+    if (!mimeType) {
+      logger.warn("Rejected reference image with unsupported extension", {
+        filePath: resolved
+      });
+      return {
+        success: false,
+        errorCode: "REFERENCE_IMAGE_UNSUPPORTED_TYPE",
+        error: `Reference image "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`
+      };
+    }
+    if (!fs4.existsSync(resolved)) {
+      logger.warn("Reference image not found", { filePath: resolved });
+      return {
+        success: false,
+        errorCode: "REFERENCE_IMAGE_NOT_FOUND",
+        error: `Reference image not found: ${filePath}`
+      };
+    }
+    try {
+      const data = fs4.readFileSync(resolved);
+      images.push({
+        filePath: resolved,
+        base64Data: data.toString("base64"),
+        mimeType
+      });
+      logger.debug("Loaded reference image", { filePath: resolved, mimeType });
+    } catch (error) {
+      logger.warn("Failed to read reference image", {
+        filePath: resolved,
+        error: formatErrorMessage(error)
+      });
+      return {
+        success: false,
+        errorCode: "REFERENCE_IMAGE_READ_ERROR",
+        error: `Failed to read reference image: ${filePath}`
+      };
+    }
+  }
+  return { success: true, images };
+}
+
 // build/media-pipeline-service.js
+import { pathToFileURL } from "node:url";
 var MediaPipelineService = class {
   config;
   logger;
@@ -38906,38 +38958,17 @@ var MediaPipelineService = class {
     });
     let referenceImages;
     if (request.referenceImages && request.referenceImages.length > 0) {
-      referenceImages = [];
-      for (const filePath of request.referenceImages) {
-        try {
-          const resolved = path4.resolve(filePath);
-          if (!fs4.existsSync(resolved)) {
-            return {
-              success: false,
-              errorCode: "REFERENCE_IMAGE_NOT_FOUND",
-              error: `Reference image not found: ${resolved}`,
-              outputDirectory: this.imageStorage.getOutputDirectory(),
-              warnings
-            };
-          }
-          const data = fs4.readFileSync(resolved);
-          const ext = path4.extname(resolved).toLowerCase();
-          const mimeType = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
-          referenceImages.push({
-            filePath: resolved,
-            base64Data: data.toString("base64"),
-            mimeType
-          });
-          this.logger.debug("Loaded reference image", { filePath: resolved, mimeType });
-        } catch (error) {
-          return {
-            success: false,
-            errorCode: "REFERENCE_IMAGE_READ_ERROR",
-            error: `Failed to read reference image ${filePath}: ${formatErrorMessage(error)}`,
-            outputDirectory: this.imageStorage.getOutputDirectory(),
-            warnings
-          };
-        }
+      const loaded = loadReferenceImages(request.referenceImages, this.logger);
+      if (!loaded.success) {
+        return {
+          success: false,
+          errorCode: loaded.errorCode,
+          error: loaded.error,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings
+        };
       }
+      referenceImages = loaded.images;
     }
     const generated = await this.geminiClient.generateImage({
       prompt: request.prompt,
@@ -43048,7 +43079,7 @@ var NEVER = INVALID;
 // build/schemas.js
 var createAssetArgsSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1, "Prompt is required").max(1e4, "Prompt must be at most 10000 characters long").describe("Detailed description of the image to generate"),
-  referenceImages: external_exports.array(external_exports.string().trim().min(1, "Reference image path cannot be empty").max(1024, "Reference image path must be at most 1024 characters long")).max(5, "Maximum 5 reference images").optional().describe("Absolute file paths to reference images to include with the prompt for style/character consistency"),
+  referenceImages: external_exports.array(external_exports.string().trim().min(1, "Reference image path cannot be empty").max(1024, "Reference image path must be at most 1024 characters long")).max(5, "Maximum 5 reference images").optional().describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
   outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path inside the configured output directory"),
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
   model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation")
@@ -43065,7 +43096,7 @@ var createAssetInputSchema = {
     },
     referenceImages: {
       type: "array",
-      description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency \u2014 the model sees these images alongside the text prompt. Maximum 5 images.",
+      description: "Absolute file paths to reference images to include with the prompt. Useful for character/style consistency \u2014 the model sees these images alongside the text prompt. Supported formats: PNG, JPEG, WebP. Maximum 5 images.",
       items: {
         type: "string",
         minLength: 1,

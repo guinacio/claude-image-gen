@@ -1,3 +1,5 @@
+import os from "node:os";
+import path from "node:path";
 import { DEFAULT_LOG_LEVEL, DEFAULT_REQUEST_TIMEOUT_MS, FALLBACK_IMAGE_MODELS, } from "./types.js";
 const LOG_LEVEL_PRIORITY = {
     error: 0,
@@ -28,6 +30,25 @@ export function parseRequestTimeoutMs(value) {
     }
     return Math.floor(parsed);
 }
+function resolveOutputDirectory(value) {
+    const homeDirectory = os.homedir();
+    const trimmedValue = value?.trim();
+    if (!trimmedValue) {
+        return path.join(homeDirectory, "generated-images");
+    }
+    const expandedValue = trimmedValue
+        .replace(/\$\{HOME\}/g, homeDirectory)
+        .replace(/\$HOME/g, homeDirectory)
+        .replace(/\$\{USERPROFILE\}/g, homeDirectory)
+        .replace(/%USERPROFILE%/g, homeDirectory)
+        .replace(/^~(?=[\\/]|$)/, homeDirectory);
+    if (expandedValue.includes("${")) {
+        return path.join(homeDirectory, "generated-images");
+    }
+    return path.isAbsolute(expandedValue)
+        ? expandedValue
+        : path.resolve(expandedValue);
+}
 export function getFallbackImageModels(configuredDefaultModel) {
     return [...new Set([configuredDefaultModel, ...FALLBACK_IMAGE_MODELS])];
 }
@@ -41,7 +62,7 @@ export function createRuntimeConfig(env = process.env) {
     return {
         apiKey: env.GEMINI_API_KEY?.trim() ?? "",
         defaultModel: env.GEMINI_DEFAULT_MODEL?.trim() || FALLBACK_IMAGE_MODELS[0],
-        outputDirectory: env.IMAGE_OUTPUT_DIR?.trim() || "./generated-images",
+        outputDirectory: resolveOutputDirectory(env.IMAGE_OUTPUT_DIR),
         requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
         logLevel: parseLogLevel(env.MEDIA_PIPELINE_LOG_LEVEL),
     };

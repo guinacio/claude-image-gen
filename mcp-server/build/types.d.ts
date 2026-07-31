@@ -13,7 +13,6 @@ export interface ReferenceImage {
 export interface GenerateImageInput {
     prompt: string;
     referenceImages?: ReferenceImage[];
-    outputPath?: string;
     aspectRatio?: AspectRatio;
     model?: GeminiModel;
     timeoutMs?: number;
@@ -24,16 +23,18 @@ export interface GenerateImageResult {
     mimeType?: string;
     error?: string;
     errorCode?: string;
+    internalError?: string;
 }
 export interface SavedImageResult {
     success: boolean;
     filePath?: string;
     error?: string;
+    errorCode?: string;
+    internalError?: string;
 }
 export interface GeminiConfig {
     apiKey: string;
     defaultModel: GeminiModel;
-    outputDirectory: string;
     requestTimeoutMs: number;
 }
 export interface RuntimeConfig {
@@ -53,6 +54,7 @@ export interface CreateAssetRequest {
 export interface CreateAssetResponse {
     success: boolean;
     filePath?: string;
+    resourceUri?: string;
     mimeType?: string;
     prompt?: string;
     aspectRatio?: AspectRatio;

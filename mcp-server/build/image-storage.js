@@ -3,9 +3,12 @@ import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 export class ImageStorage {
     outputDir;
+    outputDirRealPath;
+    static OUTPUT_PATH_NOT_ALLOWED_MESSAGE = "outputPath must stay within the configured output directory";
     constructor(outputDir) {
         this.outputDir = path.resolve(outputDir);
         this.ensureDirectory(this.outputDir);
+        this.outputDirRealPath = this.getRealPath(this.outputDir);
     }
     ensureDirectory(dirPath) {
         if (!fs.existsSync(dirPath)) {
@@ -28,14 +31,24 @@ export class ImageStorage {
             fs.writeFileSync(filePath, buffer);
             return {
                 success: true,
-                filePath: filePath,
+                filePath,
             };
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage === ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE) {
+                return {
+                    success: false,
+                    errorCode: "OUTPUT_PATH_NOT_ALLOWED",
+                    error: ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE,
+                    internalError: errorMessage,
+                };
+            }
             return {
                 success: false,
-                error: `Failed to save image: ${errorMessage}`,
+                errorCode: "FILE_SAVE_FAILED",
+                error: "Failed to save generated image.",
+                internalError: errorMessage,
             };
         }
     }
@@ -47,13 +60,7 @@ export class ImageStorage {
         let resolvedPath = path.isAbsolute(customPath)
             ? path.normalize(customPath)
             : path.resolve(this.outputDir, customPath);
-        if (!path.isAbsolute(customPath)) {
-            const relativeToOutput = path.relative(this.outputDir, resolvedPath);
-            if (relativeToOutput.startsWith("..") ||
-                path.isAbsolute(relativeToOutput)) {
-                throw new Error("Relative outputPath cannot escape the configured output directory");
-            }
-        }
+        this.assertPathWithinOutputDirectory(resolvedPath);
         const pathIsDirectory = endsWithSeparator ||
             (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory());
         if (pathIsDirectory) {
@@ -62,7 +69,31 @@ export class ImageStorage {
         else if (!path.extname(resolvedPath)) {
             resolvedPath = `${resolvedPath}${extension}`;
         }
+        this.assertPathWithinOutputDirectory(resolvedPath);
         return resolvedPath;
+    }
+    assertPathWithinOutputDirectory(targetPath) {
+        const nearestExistingPath = this.findNearestExistingPath(targetPath);
+        const resolvedRoot = this.getRealPath(nearestExistingPath);
+        const relativeToOutput = path.relative(this.outputDirRealPath, resolvedRoot);
+        if (relativeToOutput.startsWith("..") ||
+            path.isAbsolute(relativeToOutput)) {
+            throw new Error(ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE);
+        }
+    }
+    findNearestExistingPath(targetPath) {
+        let currentPath = path.resolve(targetPath);
+        while (!fs.existsSync(currentPath)) {
+            const parentPath = path.dirname(currentPath);
+            if (parentPath === currentPath) {
+                break;
+            }
+            currentPath = parentPath;
+        }
+        return currentPath;
+    }
+    getRealPath(targetPath) {
+        return fs.realpathSync.native?.(targetPath) ?? fs.realpathSync(targetPath);
     }
     getExtensionFromMimeType(mimeType) {
         const mimeToExt = {

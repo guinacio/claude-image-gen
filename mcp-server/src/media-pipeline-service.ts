@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { GeminiImageClient, fetchImageModels } from "./gemini-client.js";
 import { ImageStorage } from "./image-storage.js";
+import { pathToFileURL } from "node:url";
 import {
   formatErrorMessage,
   getFallbackImageModels,
@@ -35,7 +36,6 @@ export class MediaPipelineService {
     this.geminiClient = new GeminiImageClient({
       apiKey: config.apiKey,
       defaultModel: config.defaultModel,
-      outputDirectory: config.outputDirectory,
       requestTimeoutMs: config.requestTimeoutMs,
     });
     this.imageStorage = new ImageStorage(config.outputDirectory);
@@ -76,7 +76,7 @@ export class MediaPipelineService {
         error: errorMessage,
       });
       warnings.push(
-        `Gemini model discovery failed; using fallback defaults. ${errorMessage}`
+        "Gemini model discovery failed; using fallback defaults."
       );
       availableModels = getFallbackImageModels(this.config.defaultModel);
     }
@@ -181,6 +181,13 @@ export class MediaPipelineService {
     });
 
     if (!generated.success || !generated.base64Data || !generated.mimeType) {
+      if (generated.internalError) {
+        this.logger.warn("Gemini image generation failed", {
+          error: generated.internalError,
+          errorCode: generated.errorCode,
+        });
+      }
+
       return {
         success: false,
         errorCode: generated.errorCode || "IMAGE_GENERATION_FAILED",
@@ -200,9 +207,16 @@ export class MediaPipelineService {
     );
 
     if (!saved.success || !saved.filePath) {
+      if (saved.internalError) {
+        this.logger.warn("Saving generated image failed", {
+          error: saved.internalError,
+          errorCode: saved.errorCode,
+        });
+      }
+
       return {
         success: false,
-        errorCode: "FILE_SAVE_FAILED",
+        errorCode: saved.errorCode || "FILE_SAVE_FAILED",
         error: saved.error || "Failed to save generated image",
         prompt: request.prompt,
         aspectRatio: request.aspectRatio || "1:1",
@@ -223,6 +237,7 @@ export class MediaPipelineService {
     return {
       success: true,
       filePath: saved.filePath,
+      resourceUri: pathToFileURL(saved.filePath).href,
       mimeType: generated.mimeType,
       prompt: request.prompt,
       aspectRatio: request.aspectRatio || "1:1",

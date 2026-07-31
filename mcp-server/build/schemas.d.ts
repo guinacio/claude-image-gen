@@ -5,7 +5,7 @@ export declare const createAssetArgsSchema: z.ZodObject<{
     outputPath: z.ZodOptional<z.ZodString>;
     aspectRatio: z.ZodOptional<z.ZodEnum<["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"]>>;
     model: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
+}, "strict", z.ZodTypeAny, {
     prompt: string;
     aspectRatio?: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "16:9" | "9:16" | undefined;
     model?: string | undefined;
@@ -20,6 +20,7 @@ export declare const createAssetArgsSchema: z.ZodObject<{
 }>;
 export declare const createAssetInputSchema: {
     readonly type: "object";
+    readonly additionalProperties: false;
     readonly properties: {
         readonly prompt: {
             readonly type: "string";
@@ -39,7 +40,7 @@ export declare const createAssetInputSchema: {
         };
         readonly outputPath: {
             readonly type: "string";
-            readonly description: "Optional custom output file path. Relative paths stay inside the configured output directory; absolute paths are allowed for local workflows.";
+            readonly description: "Optional custom output file path inside the configured output directory. Both relative and absolute paths must stay within that directory.";
             readonly minLength: 1;
             readonly maxLength: 1024;
         };
@@ -59,6 +60,7 @@ export declare const createAssetInputSchema: {
 };
 export declare const createAssetOutputSchema: {
     readonly type: "object";
+    readonly additionalProperties: false;
     readonly properties: {
         readonly success: {
             readonly type: "boolean";
@@ -67,6 +69,10 @@ export declare const createAssetOutputSchema: {
         readonly filePath: {
             readonly type: "string";
             readonly description: "Absolute path to the saved image file.";
+        };
+        readonly resourceUri: {
+            readonly type: "string";
+            readonly description: "Resource URI for the generated file returned in a resource_link content block.";
         };
         readonly mimeType: {
             readonly type: "string";

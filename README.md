@@ -9,7 +9,7 @@ AI-powered image generation using Google Gemini, integrated with Claude Code.
 - **Two execution modes**: CLI script (skill-only) or MCP server (protocol-based)
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
 - Multiple model support (quality vs speed)
-- Images saved to disk with file paths returned
+- Images saved to disk within the configured output directory, with file paths returned
 
 ## Prerequisites
 
@@ -78,6 +78,7 @@ GEMINI_API_KEY=your-api-key-here node build/cli.bundle.js \
 ```
 
 The CLI runs directly against Gemini and returns structured JSON on stdout. It does not require the MCP server layer.
+Any custom output path must still remain inside the configured output directory.
 
 #### 3. Add to Claude Code
 

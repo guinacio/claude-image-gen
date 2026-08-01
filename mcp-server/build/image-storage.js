@@ -5,6 +5,12 @@ export class ImageStorage {
     outputDir;
     outputDirRealPath;
     static OUTPUT_PATH_NOT_ALLOWED_MESSAGE = "outputPath must stay within the configured output directory";
+    static MIME_EXTENSIONS = {
+        "image/png": [".png"],
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/webp": [".webp"],
+        "image/gif": [".gif"],
+    };
     constructor(outputDir) {
         this.outputDir = path.resolve(outputDir);
         this.ensureDirectory(this.outputDir);
@@ -17,9 +23,7 @@ export class ImageStorage {
     }
     saveImage(base64Data, customPath, mimeType = "image/png") {
         try {
-            // Determine file extension from mime type
-            const extension = this.getExtensionFromMimeType(mimeType);
-            const filePath = this.resolveFilePath(customPath, extension);
+            const filePath = this.resolveFilePath(customPath, mimeType);
             // Ensure parent directory exists
             const parentDir = path.dirname(filePath);
             this.ensureDirectory(parentDir);
@@ -52,7 +56,8 @@ export class ImageStorage {
             };
         }
     }
-    resolveFilePath(customPath, extension) {
+    resolveFilePath(customPath, mimeType) {
+        const extension = this.getExtensionFromMimeType(mimeType);
         if (!customPath) {
             return path.join(this.outputDir, `generated-${randomUUID()}${extension}`);
         }
@@ -66,11 +71,30 @@ export class ImageStorage {
         if (pathIsDirectory) {
             resolvedPath = path.join(resolvedPath, `generated-${randomUUID()}${extension}`);
         }
-        else if (!path.extname(resolvedPath)) {
-            resolvedPath = `${resolvedPath}${extension}`;
+        else {
+            resolvedPath = this.applyExtensionForMimeType(resolvedPath, mimeType, extension);
         }
         this.assertPathWithinOutputDirectory(resolvedPath);
         return resolvedPath;
+    }
+    /**
+     * Ensures the file extension reflects the actual image format. A missing
+     * extension is appended; an extension that is invalid for the mime type is
+     * replaced (e.g. `photo.png` for image/jpeg data becomes `photo.jpg`).
+     * Equivalent extensions (`.jpg`/`.jpeg`) and unknown mime types keep the
+     * caller-provided extension.
+     */
+    applyExtensionForMimeType(filePath, mimeType, extension) {
+        const currentExtension = path.extname(filePath);
+        if (!currentExtension) {
+            return `${filePath}${extension}`;
+        }
+        const allowedExtensions = ImageStorage.MIME_EXTENSIONS[mimeType];
+        if (allowedExtensions &&
+            !allowedExtensions.includes(currentExtension.toLowerCase())) {
+            return `${filePath.slice(0, -currentExtension.length)}${extension}`;
+        }
+        return filePath;
     }
     assertPathWithinOutputDirectory(targetPath) {
         const nearestExistingPath = this.findNearestExistingPath(targetPath);
@@ -96,13 +120,7 @@ export class ImageStorage {
         return fs.realpathSync.native?.(targetPath) ?? fs.realpathSync(targetPath);
     }
     getExtensionFromMimeType(mimeType) {
-        const mimeToExt = {
-            "image/png": ".png",
-            "image/jpeg": ".jpg",
-            "image/webp": ".webp",
-            "image/gif": ".gif",
-        };
-        return mimeToExt[mimeType] || ".png";
+        return ImageStorage.MIME_EXTENSIONS[mimeType]?.[0] || ".png";
     }
     getOutputDirectory() {
         return this.outputDir;

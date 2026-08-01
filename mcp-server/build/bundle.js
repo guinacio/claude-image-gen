@@ -78910,6 +78910,12 @@ var ImageStorage = class _ImageStorage {
   outputDir;
   outputDirRealPath;
   static OUTPUT_PATH_NOT_ALLOWED_MESSAGE = "outputPath must stay within the configured output directory";
+  static MIME_EXTENSIONS = {
+    "image/png": [".png"],
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/webp": [".webp"],
+    "image/gif": [".gif"]
+  };
   constructor(outputDir) {
     this.outputDir = path3.resolve(outputDir);
     this.ensureDirectory(this.outputDir);
@@ -78922,8 +78928,7 @@ var ImageStorage = class _ImageStorage {
   }
   saveImage(base64Data, customPath, mimeType = "image/png") {
     try {
-      const extension = this.getExtensionFromMimeType(mimeType);
-      const filePath = this.resolveFilePath(customPath, extension);
+      const filePath = this.resolveFilePath(customPath, mimeType);
       const parentDir = path3.dirname(filePath);
       this.ensureDirectory(parentDir);
       const buffer = Buffer.from(base64Data, "base64");
@@ -78953,7 +78958,8 @@ var ImageStorage = class _ImageStorage {
       };
     }
   }
-  resolveFilePath(customPath, extension) {
+  resolveFilePath(customPath, mimeType) {
+    const extension = this.getExtensionFromMimeType(mimeType);
     if (!customPath) {
       return path3.join(this.outputDir, `generated-${randomUUID()}${extension}`);
     }
@@ -78963,11 +78969,29 @@ var ImageStorage = class _ImageStorage {
     const pathIsDirectory = endsWithSeparator || fs3.existsSync(resolvedPath) && fs3.statSync(resolvedPath).isDirectory();
     if (pathIsDirectory) {
       resolvedPath = path3.join(resolvedPath, `generated-${randomUUID()}${extension}`);
-    } else if (!path3.extname(resolvedPath)) {
-      resolvedPath = `${resolvedPath}${extension}`;
+    } else {
+      resolvedPath = this.applyExtensionForMimeType(resolvedPath, mimeType, extension);
     }
     this.assertPathWithinOutputDirectory(resolvedPath);
     return resolvedPath;
+  }
+  /**
+   * Ensures the file extension reflects the actual image format. A missing
+   * extension is appended; an extension that is invalid for the mime type is
+   * replaced (e.g. `photo.png` for image/jpeg data becomes `photo.jpg`).
+   * Equivalent extensions (`.jpg`/`.jpeg`) and unknown mime types keep the
+   * caller-provided extension.
+   */
+  applyExtensionForMimeType(filePath, mimeType, extension) {
+    const currentExtension = path3.extname(filePath);
+    if (!currentExtension) {
+      return `${filePath}${extension}`;
+    }
+    const allowedExtensions = _ImageStorage.MIME_EXTENSIONS[mimeType];
+    if (allowedExtensions && !allowedExtensions.includes(currentExtension.toLowerCase())) {
+      return `${filePath.slice(0, -currentExtension.length)}${extension}`;
+    }
+    return filePath;
   }
   assertPathWithinOutputDirectory(targetPath) {
     const nearestExistingPath = this.findNearestExistingPath(targetPath);
@@ -78992,13 +79016,7 @@ var ImageStorage = class _ImageStorage {
     return fs3.realpathSync.native?.(targetPath) ?? fs3.realpathSync(targetPath);
   }
   getExtensionFromMimeType(mimeType) {
-    const mimeToExt = {
-      "image/png": ".png",
-      "image/jpeg": ".jpg",
-      "image/webp": ".webp",
-      "image/gif": ".gif"
-    };
-    return mimeToExt[mimeType] || ".png";
+    return _ImageStorage.MIME_EXTENSIONS[mimeType]?.[0] || ".png";
   }
   getOutputDirectory() {
     return this.outputDir;
@@ -79653,7 +79671,7 @@ var mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
 function createServer() {
   const server = new McpServer({
     name: "media-pipeline",
-    version: "1.1.0"
+    version: "1.1.1"
   }, {
     capabilities: {
       tools: {}

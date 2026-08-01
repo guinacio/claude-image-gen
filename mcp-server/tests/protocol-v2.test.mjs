@@ -19,7 +19,7 @@ function createClient() {
   const client = new Client(
     {
       name: "media-pipeline-protocol-v2-test",
-      version: "1.1.0",
+      version: "1.1.1",
     },
     {
       // The v2 client defaults to the legacy handshake; pin the modern

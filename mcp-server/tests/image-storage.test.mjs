@@ -52,3 +52,58 @@ test("ImageStorage rejects relative path traversal outside the configured output
     removeDirectory(outputDirectory);
   }
 });
+
+test("ImageStorage corrects a file extension that does not match the image mime type", () => {
+  const outputDirectory = createTempDirectory();
+  const storage = new ImageStorage(outputDirectory);
+
+  try {
+    const result = storage.saveImage(
+      Buffer.from("image-bytes").toString("base64"),
+      "photo.png",
+      "image/jpeg"
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(path.basename(result.filePath), "photo.jpg");
+    assert.equal(fs.existsSync(result.filePath), true);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("ImageStorage keeps equivalent extensions for the same mime type", () => {
+  const outputDirectory = createTempDirectory();
+  const storage = new ImageStorage(outputDirectory);
+
+  try {
+    const result = storage.saveImage(
+      Buffer.from("image-bytes").toString("base64"),
+      "photo.JPEG",
+      "image/jpeg"
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(path.basename(result.filePath), "photo.JPEG");
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("ImageStorage keeps the caller extension for unknown mime types", () => {
+  const outputDirectory = createTempDirectory();
+  const storage = new ImageStorage(outputDirectory);
+
+  try {
+    const result = storage.saveImage(
+      Buffer.from("image-bytes").toString("base64"),
+      "photo.bin",
+      "image/unknown-format"
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(path.basename(result.filePath), "photo.bin");
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});

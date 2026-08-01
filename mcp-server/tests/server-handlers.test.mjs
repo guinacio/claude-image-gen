@@ -10,7 +10,7 @@ import {
 test("tool config keeps its title, annotations, and strict hand-written schemas", () => {
   assert.equal(CREATE_ASSET_TOOL_NAME, "create_asset");
   assert.equal(CREATE_ASSET_TOOL_CONFIG.title, "Create Asset");
-  assert.match(CREATE_ASSET_TOOL_CONFIG.description, /Google Gemini AI/);
+  assert.match(CREATE_ASSET_TOOL_CONFIG.description, /Google Gemini or OpenAI/);
 
   assert.deepEqual(CREATE_ASSET_TOOL_CONFIG.annotations, {
     readOnlyHint: false,

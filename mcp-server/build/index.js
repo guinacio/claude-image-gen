@@ -20,7 +20,7 @@ const mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
 function createServer() {
     const server = new McpServer({
         name: "media-pipeline",
-        version: "1.1.1",
+        version: "1.1.2",
     }, {
         capabilities: {
             tools: {},

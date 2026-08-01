@@ -49973,12 +49973,29 @@ var REFERENCE_IMAGE_MIME_TYPES = {
   ".webp": "image/webp"
 };
 var SUPPORTED_REFERENCE_IMAGE_FORMATS = "PNG, JPEG, or WebP";
+var MAX_REFERENCE_IMAGE_BYTES = 20 * 1024 * 1024;
+var PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+var JPEG_SIGNATURE = Buffer.from([255, 216, 255]);
+var RIFF_SIGNATURE = Buffer.from("RIFF", "ascii");
+var WEBP_SIGNATURE = Buffer.from("WEBP", "ascii");
+function sniffImageMimeType(data) {
+  if (data.length >= 8 && data.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    return "image/png";
+  }
+  if (data.length >= 3 && data.subarray(0, 3).equals(JPEG_SIGNATURE)) {
+    return "image/jpeg";
+  }
+  if (data.length >= 12 && data.subarray(0, 4).equals(RIFF_SIGNATURE) && data.subarray(8, 12).equals(WEBP_SIGNATURE)) {
+    return "image/webp";
+  }
+  return null;
+}
 function loadReferenceImages(filePaths, logger) {
   const images = [];
   for (const filePath of filePaths) {
     const resolved = path5.resolve(filePath);
-    const mimeType = REFERENCE_IMAGE_MIME_TYPES[path5.extname(resolved).toLowerCase()];
-    if (!mimeType) {
+    const extensionMimeType = REFERENCE_IMAGE_MIME_TYPES[path5.extname(resolved).toLowerCase()];
+    if (!extensionMimeType) {
       logger.warn("Rejected reference image with unsupported extension", {
         filePath: resolved
       });
@@ -49997,13 +50014,39 @@ function loadReferenceImages(filePaths, logger) {
       };
     }
     try {
+      const fileSize = fs4.statSync(resolved).size;
+      if (fileSize > MAX_REFERENCE_IMAGE_BYTES) {
+        logger.warn("Rejected reference image exceeding the size limit", {
+          filePath: resolved,
+          fileSize
+        });
+        return {
+          success: false,
+          errorCode: "REFERENCE_IMAGE_TOO_LARGE",
+          error: `Reference image "${filePath}" exceeds the ${Math.floor(MAX_REFERENCE_IMAGE_BYTES / (1024 * 1024))}MB size limit.`
+        };
+      }
       const data = fs4.readFileSync(resolved);
+      const detectedMimeType = sniffImageMimeType(data);
+      if (!detectedMimeType) {
+        logger.warn("Rejected reference image with non-image content", {
+          filePath: resolved
+        });
+        return {
+          success: false,
+          errorCode: "REFERENCE_IMAGE_UNSUPPORTED_TYPE",
+          error: `Reference image "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`
+        };
+      }
       images.push({
         filePath: resolved,
         base64Data: data.toString("base64"),
-        mimeType
+        mimeType: detectedMimeType
       });
-      logger.debug("Loaded reference image", { filePath: resolved, mimeType });
+      logger.debug("Loaded reference image", {
+        filePath: resolved,
+        mimeType: detectedMimeType
+      });
     } catch (error51) {
       logger.warn("Failed to read reference image", {
         filePath: resolved,
@@ -64806,7 +64849,7 @@ var createAssetArgsSchema = external_exports.strictObject({
   referenceImages: external_exports.array(external_exports.string().trim().min(1, "Reference image path cannot be empty").max(1024, "Reference image path must be at most 1024 characters long")).max(5, "Maximum 5 reference images").optional().describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
   outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path inside the configured output directory"),
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
-  model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation")
+  model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)")
 });
 var createAssetInputSchema = {
   type: "object",
@@ -64841,7 +64884,7 @@ var createAssetInputSchema = {
     },
     model: {
       type: "string",
-      description: "Optional Gemini model name for image generation. If omitted, the configured default model is used when available.",
+      description: "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
       minLength: 1,
       maxLength: 256
     }
@@ -64879,7 +64922,7 @@ var createAssetOutputSchema = {
     },
     model: {
       type: "string",
-      description: "Gemini model used for generation."
+      description: "Model used for generation (Gemini or OpenAI)."
     },
     outputDirectory: {
       type: "string",
@@ -64916,7 +64959,7 @@ Options:
   -m, --model <model>        Model to use (gpt-image*/dall-e* \u2192 OpenAI, others \u2192 Gemini; validated dynamically)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
   -d, --output-dir <dir>     Output directory (default: current directory)
-  -t, --timeout-ms <ms>      Gemini request timeout in milliseconds
+  -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
   -h, --help                 Show this help message
 

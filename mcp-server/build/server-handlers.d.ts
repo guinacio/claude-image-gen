@@ -23,7 +23,7 @@ export interface CreateAssetToolDependencies {
 export declare const CREATE_ASSET_TOOL_NAME = "create_asset";
 export declare const CREATE_ASSET_TOOL_CONFIG: {
     readonly title: "Create Asset";
-    readonly description: "Generate an image using Google Gemini AI, save it within the configured output directory, and return the saved file path plus structured metadata.";
+    readonly description: "Generate an image with Google Gemini or OpenAI (gpt-image-2), save it within the configured output directory, and return the saved file path plus structured metadata. The model name selects the provider: gpt-image*/dall-e* models route to OpenAI, all others to Gemini.";
     readonly inputSchema: import("@modelcontextprotocol/server").StandardSchemaWithJSON<unknown, unknown>;
     readonly outputSchema: import("@modelcontextprotocol/server").StandardSchemaWithJSON<CreateAssetResponse, CreateAssetResponse>;
     readonly annotations: {

@@ -18,7 +18,7 @@ function createClient() {
 
   const client = new Client({
     name: "media-pipeline-protocol-test",
-    version: "1.1.1",
+    version: "1.1.2",
   });
 
   return { client, transport };

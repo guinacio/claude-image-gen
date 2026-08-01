@@ -24,7 +24,7 @@ Options:
   -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
   -d, --output-dir <dir>     Output directory (default: current directory)
-  -t, --timeout-ms <ms>      Gemini request timeout in milliseconds
+  -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
   -h, --help                 Show this help message
 

@@ -39,7 +39,9 @@ export const createAssetArgsSchema = z
       .min(1, "model cannot be empty")
       .max(256, "model must be at most 256 characters long")
       .optional()
-      .describe("Model to use for generation"),
+      .describe(
+        "Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)"
+      ),
   });
 
 export const createAssetInputSchema = {
@@ -80,7 +82,7 @@ export const createAssetInputSchema = {
     model: {
       type: "string",
       description:
-        "Optional Gemini model name for image generation. If omitted, the configured default model is used when available.",
+        "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
       minLength: 1,
       maxLength: 256,
     },
@@ -119,7 +121,7 @@ export const createAssetOutputSchema = {
     },
     model: {
       type: "string",
-      description: "Gemini model used for generation.",
+      description: "Model used for generation (Gemini or OpenAI).",
     },
     outputDirectory: {
       type: "string",

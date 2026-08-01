@@ -47,7 +47,7 @@ export declare const createAssetInputSchema: {
         };
         readonly model: {
             readonly type: "string";
-            readonly description: "Optional Gemini model name for image generation. If omitted, the configured default model is used when available.";
+            readonly description: "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.";
             readonly minLength: 1;
             readonly maxLength: 256;
         };
@@ -85,7 +85,7 @@ export declare const createAssetOutputSchema: {
         };
         readonly model: {
             readonly type: "string";
-            readonly description: "Gemini model used for generation.";
+            readonly description: "Model used for generation (Gemini or OpenAI).";
         };
         readonly outputDirectory: {
             readonly type: "string";

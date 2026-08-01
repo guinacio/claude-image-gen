@@ -24,7 +24,7 @@ const transport = new StdioClientTransport({
 
 const client = new Client({
   name: "media-pipeline-smoke-test",
-  version: "1.1.1",
+  version: "1.1.2",
 });
 
 try {

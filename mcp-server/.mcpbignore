@@ -14,6 +14,14 @@ build/gemini-client.js
 build/image-storage.js
 build/index.js
 build/media-pipeline-service.js
+build/openai-client.js
+build/openai-client.d.ts
+build/provider.js
+build/provider.d.ts
+build/reference-images.js
+build/reference-images.d.ts
 build/runtime.js
 build/schemas.js
+build/server-handlers.js
+build/server-handlers.d.ts
 build/types.js

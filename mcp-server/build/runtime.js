@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { DEFAULT_LOG_LEVEL, DEFAULT_REQUEST_TIMEOUT_MS, FALLBACK_IMAGE_MODELS, } from "./types.js";
+import { DEFAULT_LOG_LEVEL, DEFAULT_REQUEST_TIMEOUT_MS, FALLBACK_IMAGE_MODELS, FALLBACK_OPENAI_IMAGE_MODELS, } from "./types.js";
 const LOG_LEVEL_PRIORITY = {
     error: 0,
     warn: 1,
@@ -58,10 +58,28 @@ export function resolveDefaultModel(availableModels, configuredDefaultModel) {
     }
     return availableModels[0] || configuredDefaultModel;
 }
+export function parseImageProvider(value, geminiApiKey, openaiApiKey) {
+    const normalized = value?.trim().toLowerCase();
+    if (normalized === "gemini" || normalized === "openai") {
+        return normalized;
+    }
+    if (!geminiApiKey && openaiApiKey) {
+        return "openai";
+    }
+    return "gemini";
+}
+export function hasAnyApiKey(config) {
+    return Boolean(config.geminiApiKey || config.openaiApiKey);
+}
 export function createRuntimeConfig(env = process.env) {
+    const geminiApiKey = env.GEMINI_API_KEY?.trim() ?? "";
+    const openaiApiKey = env.OPENAI_API_KEY?.trim() ?? "";
     return {
-        apiKey: env.GEMINI_API_KEY?.trim() ?? "",
-        defaultModel: env.GEMINI_DEFAULT_MODEL?.trim() || FALLBACK_IMAGE_MODELS[0],
+        geminiApiKey,
+        openaiApiKey,
+        geminiDefaultModel: env.GEMINI_DEFAULT_MODEL?.trim() || FALLBACK_IMAGE_MODELS[0],
+        openaiDefaultModel: env.OPENAI_DEFAULT_MODEL?.trim() || FALLBACK_OPENAI_IMAGE_MODELS[0],
+        defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey),
         outputDirectory: resolveOutputDirectory(env.IMAGE_OUTPUT_DIR),
         requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
         logLevel: parseLogLevel(env.MEDIA_PIPELINE_LOG_LEVEL),

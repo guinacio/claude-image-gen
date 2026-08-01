@@ -6,6 +6,9 @@
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}",
         "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2}",
+        "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-gemini}",
         "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}"
       }
     }

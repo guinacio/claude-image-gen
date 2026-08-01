@@ -1,5 +1,11 @@
 import path from "node:path";
-import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { fromJsonSchema } from "@modelcontextprotocol/server";
+import type {
+  JsonSchemaType,
+  JsonSchemaValidator,
+  McpServer,
+  jsonSchemaValidator,
+} from "@modelcontextprotocol/server";
 import { ZodError } from "zod";
 import {
   createAssetArgsSchema,
@@ -29,29 +35,55 @@ export interface MediaPipelineServiceLike {
   getOutputDirectory(): string;
 }
 
-export const CREATE_ASSET_TOOL = {
-  name: "create_asset",
+export interface CreateAssetToolDependencies {
+  mediaPipelineService: MediaPipelineServiceLike;
+  logger: Logger;
+}
+
+/**
+ * Pass-through JSON Schema validator provider.
+ *
+ * The SDK validates `tools/call` arguments against the registered
+ * `inputSchema` before the handler runs and answers a protocol error
+ * (`-32602`) on failure. This server's contract is different: every
+ * argument problem must come back as a sanitized `isError` tool result with
+ * a stable `errorCode`, produced by the single zod `safeParse` inside the
+ * handler. Handing `fromJsonSchema` a validator that accepts everything
+ * keeps our hand-written JSON Schemas on the wire (`tools/list` still
+ * advertises `additionalProperties: false`, `required`, lengths, enums)
+ * while leaving validation authority with the handler.
+ */
+const passThroughJsonSchemaValidator: jsonSchemaValidator = {
+  getValidator<T>(): JsonSchemaValidator<T> {
+    return (input: unknown) => ({
+      valid: true,
+      data: input as T,
+      errorMessage: undefined,
+    });
+  },
+};
+
+export const CREATE_ASSET_TOOL_NAME = "create_asset";
+
+export const CREATE_ASSET_TOOL_CONFIG = {
+  title: "Create Asset",
   description:
     "Generate an image using Google Gemini AI, save it within the configured output directory, and return the saved file path plus structured metadata.",
-  inputSchema: createAssetInputSchema,
-  outputSchema: createAssetOutputSchema,
+  inputSchema: fromJsonSchema<unknown>(
+    createAssetInputSchema as unknown as JsonSchemaType,
+    passThroughJsonSchemaValidator
+  ),
+  outputSchema: fromJsonSchema<CreateAssetResponse>(
+    createAssetOutputSchema as unknown as JsonSchemaType,
+    passThroughJsonSchemaValidator
+  ),
   annotations: {
-    title: "Create Asset",
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
     openWorldHint: true,
   },
-  execution: {
-    taskSupport: "forbidden",
-  },
 } as const;
-
-export function listTools() {
-  return {
-    tools: [CREATE_ASSET_TOOL],
-  };
-}
 
 export function createToolCallResult(result: CreateAssetResponse) {
   return {
@@ -61,21 +93,22 @@ export function createToolCallResult(result: CreateAssetResponse) {
   };
 }
 
-export async function handleCreateAssetToolCall(
-  request: { params: { name: string; arguments?: unknown } },
-  dependencies: {
-    mediaPipelineService: MediaPipelineServiceLike;
-    logger: Logger;
-  }
+export function registerCreateAssetTool(
+  server: McpServer,
+  dependencies: CreateAssetToolDependencies
 ) {
-  if (request.params.name !== CREATE_ASSET_TOOL.name) {
-    throw new McpError(
-      ErrorCode.InvalidParams,
-      `Unknown tool: ${request.params.name}`
-    );
-  }
+  return server.registerTool(
+    CREATE_ASSET_TOOL_NAME,
+    CREATE_ASSET_TOOL_CONFIG,
+    async (args: unknown) => handleCreateAssetToolCall(args, dependencies)
+  );
+}
 
-  const parsedArgs = createAssetArgsSchema.safeParse(request.params.arguments ?? {});
+export async function handleCreateAssetToolCall(
+  args: unknown,
+  dependencies: CreateAssetToolDependencies
+) {
+  const parsedArgs = createAssetArgsSchema.safeParse(args ?? {});
 
   if (!parsedArgs.success) {
     return createToolCallResult(

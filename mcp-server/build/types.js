@@ -11,5 +11,6 @@ export const FALLBACK_IMAGE_MODELS = [
     "gemini-3-pro-image-preview",
     "gemini-2.5-flash-image",
 ];
+export const FALLBACK_OPENAI_IMAGE_MODELS = ["gpt-image-2"];
 export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 export const DEFAULT_LOG_LEVEL = "info";

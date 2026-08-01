@@ -1,20 +1,23 @@
-# Gemini Image Generation - Claude Skill + MCP
+# AI Image Generation - Claude Skill + MCP
 
-AI-powered image generation using Google Gemini, integrated with Claude Code.
+AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integrated with Claude Code.
 
 ## Features
 
-- Generate images from text prompts using Gemini AI
+- Generate images from text prompts using Google Gemini or OpenAI (gpt-image-2)
+- **Dual-provider support**: model name routes the request automatically (gpt-image*/dall-e* → OpenAI, everything else → Gemini)
 - Proactive Claude skill suggests images for websites, presentations, and more
 - **Two execution modes**: CLI script (skill-only) or MCP server (protocol-based)
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
-- Multiple model support (quality vs speed)
+- Multiple model support (quality vs speed) across both providers
+- Optional reference images to guide generation (up to 5, PNG/JPEG/WebP) on both providers
 - Images saved to disk within the configured output directory, with file paths returned
+- MCP server speaks the MCP 2026-07-28 spec, with backward compatibility for older MCP clients
 
 ## Prerequisites
 
-- Google Gemini API key ([Get one here](https://aistudio.google.com/apikey))
-- Node.js 18+ (only for manual installation)
+- Google Gemini API key ([Get one here](https://aistudio.google.com/apikey)) and/or an OpenAI API key ([Get one here](https://platform.openai.com/api-keys)) — at least one is required
+- Node.js 20+ (only for manual installation)
 
 ## Installation
 
@@ -52,7 +55,7 @@ For Claude Desktop users, install the pre-built extension:
 2. Open Claude Desktop
 3. Go to **Settings** → **Extensions** → **Advanced settings**
 4. Click **Install Extension** and select the `.mcpb` file
-5. Enter your Gemini API key when prompted
+5. Enter your Gemini and/or OpenAI API key when prompted (at least one is required)
 
 ---
 
@@ -77,7 +80,7 @@ GEMINI_API_KEY=your-api-key-here node build/cli.bundle.js \
   --aspect-ratio "16:9"
 ```
 
-The CLI runs directly against Gemini and returns structured JSON on stdout. It does not require the MCP server layer.
+The CLI routes to Gemini or OpenAI based on the model name and returns structured JSON on stdout. It does not require the MCP server layer.
 Any custom output path must still remain inside the configured output directory.
 
 #### 3. Add to Claude Code
@@ -105,6 +108,9 @@ Add to your Claude Code config (`~/.claude.json`):
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}",
         "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2}",
+        "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-gemini}",
         "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}",
         "GEMINI_REQUEST_TIMEOUT_MS": "${GEMINI_REQUEST_TIMEOUT_MS:-60000}",
         "MEDIA_PIPELINE_LOG_LEVEL": "${MEDIA_PIPELINE_LOG_LEVEL:-info}"
@@ -158,15 +164,25 @@ The skill will proactively suggest image generation when:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | Yes | - | Your Gemini API key |
-| `GEMINI_DEFAULT_MODEL` | No | `gemini-3-pro-image-preview` | Default model to use |
+| `GEMINI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your Gemini API key |
+| `GEMINI_DEFAULT_MODEL` | No | `gemini-3-pro-image-preview` | Default Gemini model to use |
+| `OPENAI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your OpenAI API key |
+| `OPENAI_DEFAULT_MODEL` | No | `gpt-image-2` | Default OpenAI model to use |
+| `IMAGE_PROVIDER` | No | `gemini` | Provider (`gemini` or `openai`) used when a request omits `model` |
 | `IMAGE_OUTPUT_DIR` | No | `./generated-images` | Where to save images |
 | `GEMINI_REQUEST_TIMEOUT_MS` | No | `60000` | Timeout for Gemini requests |
 | `MEDIA_PIPELINE_LOG_LEVEL` | No | `info` | Stderr logging level |
 
+### Providers
+
+The server is dual-provider: it routes each request to Google Gemini or OpenAI (`gpt-image-2`) automatically based on the `model` name — models starting with `gpt-image` or `dall-e` go to OpenAI, everything else goes to Gemini. When a request omits `model` entirely, `IMAGE_PROVIDER` selects which provider's default model is used.
+
+- **Aspect ratios on OpenAI**: OpenAI image models only support `1024x1024`, `1536x1024`, and `1024x1536`. Requested aspect ratios are mapped to the nearest supported size, and if the mapping isn't exact the response includes a warning describing the substitution.
+- **Reference images**: supported on both providers — pass up to 5 reference image paths to guide generation.
+
 ### Models
 
-Available image models are fetched dynamically from the Gemini API at runtime. The CLI and MCP tool validate model choices against the current image-capable model list, and `GEMINI_DEFAULT_MODEL` is used when available.
+Gemini models are fetched dynamically from the Gemini API at runtime; the CLI and MCP tool validate Gemini model choices against the current image-capable model list, and `GEMINI_DEFAULT_MODEL` is used when available. For OpenAI, `gpt-image-2` is the default model (`OPENAI_DEFAULT_MODEL`); any `gpt-image*`/`dall-e*` model name routes to OpenAI.
 
 ### Aspect Ratios
 
@@ -177,6 +193,8 @@ Available image models are fetched dynamically from the Gemini API at runtime. T
 | `9:16` | Mobile stories, vertical banners |
 | `4:3` | Blog posts, general web |
 | `3:2` | Photography-style images |
+
+> On OpenAI models, aspect ratios other than `1:1`/`3:2`/`2:3`-equivalent are mapped to the nearest supported size (see [Providers](#providers)).
 
 ## Prompt Tips
 
@@ -201,7 +219,7 @@ See [skills/image-generation/references/prompt-crafting.md](skills/image-generat
 
 **CLI Mode (Default)** - Used by the skill:
 ```
-Claude → Skill → Bash → bundled CLI → Gemini API
+Claude → Skill → Bash → bundled CLI → Gemini API / OpenAI API
 ```
 - No MCP protocol overhead
 - Skill runs bundled CLI directly
@@ -209,9 +227,9 @@ Claude → Skill → Bash → bundled CLI → Gemini API
 
 **MCP Mode (Optional)** - For direct tool calls:
 ```
-Claude → MCP Tool → bundled MCP server → Gemini API
+Claude → MCP Tool → bundled MCP server → Gemini API / OpenAI API
 ```
-- Standard MCP protocol
+- Speaks the MCP 2026-07-28 spec, with backward-compatible fallback for older MCP clients
 - Useful for non-skill workflows
 - Extension package only needs bundled entry points
 
@@ -239,6 +257,8 @@ claude-image-gen/
 │   │   ├── index.ts      # MCP server entry point
 │   │   ├── cli.ts        # CLI entry point (skill uses this)
 │   │   ├── gemini-client.ts
+│   │   ├── openai-client.ts
+│   │   ├── provider.ts   # Routes requests to Gemini or OpenAI by model name
 │   │   ├── image-storage.ts
 │   │   └── types.ts
 │   ├── build/

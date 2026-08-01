@@ -1,23 +1,19 @@
 import { z } from "zod";
 export declare const createAssetArgsSchema: z.ZodObject<{
     prompt: z.ZodString;
-    referenceImages: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    referenceImages: z.ZodOptional<z.ZodArray<z.ZodString>>;
     outputPath: z.ZodOptional<z.ZodString>;
-    aspectRatio: z.ZodOptional<z.ZodEnum<["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"]>>;
+    aspectRatio: z.ZodOptional<z.ZodEnum<{
+        "1:1": "1:1";
+        "2:3": "2:3";
+        "3:2": "3:2";
+        "3:4": "3:4";
+        "4:3": "4:3";
+        "16:9": "16:9";
+        "9:16": "9:16";
+    }>>;
     model: z.ZodOptional<z.ZodString>;
-}, "strict", z.ZodTypeAny, {
-    prompt: string;
-    aspectRatio?: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "16:9" | "9:16" | undefined;
-    model?: string | undefined;
-    referenceImages?: string[] | undefined;
-    outputPath?: string | undefined;
-}, {
-    prompt: string;
-    aspectRatio?: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "16:9" | "9:16" | undefined;
-    model?: string | undefined;
-    referenceImages?: string[] | undefined;
-    outputPath?: string | undefined;
-}>;
+}, z.core.$strict>;
 export declare const createAssetInputSchema: {
     readonly type: "object";
     readonly additionalProperties: false;

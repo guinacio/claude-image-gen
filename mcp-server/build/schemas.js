@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { ASPECT_RATIOS } from "./types.js";
 export const createAssetArgsSchema = z
-    .object({
+    .strictObject({
     prompt: z
-        .string()
+        .string({
+        error: (issue) => (issue.input === undefined ? "Required" : undefined),
+    })
         .trim()
         .min(1, "Prompt is required")
         .max(10000, "Prompt must be at most 10000 characters long")
@@ -35,8 +37,7 @@ export const createAssetArgsSchema = z
         .max(256, "model must be at most 256 characters long")
         .optional()
         .describe("Model to use for generation"),
-})
-    .strict();
+});
 export const createAssetInputSchema = {
     type: "object",
     additionalProperties: false,

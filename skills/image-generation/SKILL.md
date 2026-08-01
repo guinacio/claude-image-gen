@@ -46,8 +46,20 @@ node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
 | --prompt, -p | Yes | - | Detailed image description |
 | --output, -o | No | auto-generated | Output file path |
 | --aspect-ratio, -a | No | 1:1 | 1:1, 16:9, 9:16, 4:3, 3:4, 2:3, 3:2 |
-| --model, -m | No | gemini-3-pro-image-preview | Model to use |
+| --model, -m | No | provider default | Model to use; routes the provider (gpt-image*/dall-e* → OpenAI, others → Gemini) |
+| --reference-images, -r | No | - | Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5) |
 | --output-dir, -d | No | current directory | Output directory |
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| GEMINI_API_KEY | At least one of GEMINI_API_KEY / OPENAI_API_KEY | Your Gemini API key |
+| OPENAI_API_KEY | At least one of GEMINI_API_KEY / OPENAI_API_KEY | Your OpenAI API key |
+| GEMINI_DEFAULT_MODEL | No | Preferred default Gemini model |
+| OPENAI_DEFAULT_MODEL | No | Preferred default OpenAI model (default: gpt-image-2) |
+| IMAGE_PROVIDER | No | gemini or openai — provider used when --model is omitted |
+| MEDIA_PIPELINE_LOG_LEVEL | No | Logging level for stderr diagnostics |
 
 ### Output
 
@@ -139,7 +151,10 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 
 ## Model Selection
 
-Available models are fetched dynamically from the Gemini API. By default, the CLI uses `GEMINI_DEFAULT_MODEL` when it is available, otherwise it falls back to the first discovered image-capable model.
+The CLI is dual-provider: the `--model` value routes the request — model names starting with `gpt-image` or `dall-e` go to OpenAI, everything else goes to Gemini. When `--model` is omitted, `IMAGE_PROVIDER` picks which provider's default model is used.
+
+- **Gemini** (`GEMINI_DEFAULT_MODEL`, e.g. `gemini-3-pro-image-preview`) — models are fetched dynamically from the Gemini API; the CLI falls back to the first discovered image-capable model if no default is set. Prefer Gemini for iterative creative work and when relying on the dynamically discovered model catalog.
+- **OpenAI** (`OPENAI_DEFAULT_MODEL`, default `gpt-image-2`) — use when you specifically need OpenAI's `gpt-image-2` model, or when only an OpenAI API key is configured. Note OpenAI's image sizes are limited to `1024x1024`/`1536x1024`/`1024x1536`; non-matching aspect ratios are mapped to the nearest supported size with a warning.
 
 ## Best Practices
 
@@ -166,5 +181,5 @@ If the MCP server is configured, you can also use:
 mcp__media-pipeline__create_asset
 ```
 
-Parameters: `prompt`, `outputPath`, `aspectRatio`, `model`
+Parameters: `prompt`, `outputPath`, `aspectRatio`, `model` (routes to Gemini or OpenAI by name), `referenceImages` (up to 5 absolute paths, PNG/JPEG/WebP)
 

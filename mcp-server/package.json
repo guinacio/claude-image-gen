@@ -1,7 +1,7 @@
 {
   "name": "media-pipeline-mcp",
-  "version": "1.0.2",
-  "description": "MCP server for media asset processing",
+  "version": "1.1.0",
+  "description": "MCP server for media asset processing with dual-provider image generation (Google Gemini + OpenAI)",
   "type": "module",
   "main": "build/bundle.js",
   "bin": {
@@ -10,8 +10,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "bundle:mcp": "esbuild build/index.js --bundle --platform=node --target=node18 --format=esm --outfile=build/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
-    "bundle:cli": "esbuild build/cli.js --bundle --platform=node --target=node18 --format=esm --outfile=build/cli.bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "bundle:mcp": "esbuild build/index.js --bundle --platform=node --target=node20 --format=esm --outfile=build/bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "bundle:cli": "esbuild build/cli.js --bundle --platform=node --target=node20 --format=esm --outfile=build/cli.bundle.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
     "bundle": "npm run build && npm run bundle:mcp && npm run bundle:cli",
     "start": "node build/bundle.js",
     "start:cli": "node build/cli.bundle.js --help",
@@ -22,10 +22,13 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "zod": "^3.23.0"
+    "@modelcontextprotocol/server": "^2.0.0",
+    "openai": "^7.3.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@types/node": "^20.0.0",
     "esbuild": "^0.27.2",
     "typescript": "^5.4.0"
@@ -34,6 +37,6 @@
     "build"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }

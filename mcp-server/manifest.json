@@ -1,10 +1,10 @@
 {
   "manifest_version": "0.3",
   "name": "media-pipeline",
-  "display_name": "Media Pipeline - Gemini Image Generation",
-  "version": "1.0.2",
-  "description": "Generate AI images locally through a bundled Gemini-powered MCP server and standalone CLI.",
-  "long_description": "A production-oriented MCP Bundle for local image generation workflows with Google Gemini. The bundle exposes a create_asset MCP tool, validates requests defensively, uses bundled Node entry points for both the MCP server and the standalone CLI, and saves generated images directly to local disk for easy use in websites, documents, and presentations.",
+  "display_name": "Media Pipeline - AI Image Generation (Gemini + OpenAI)",
+  "version": "1.1.0",
+  "description": "Generate AI images locally through a bundled dual-provider MCP server and standalone CLI, powered by Google Gemini or OpenAI (gpt-image-2).",
+  "long_description": "A production-oriented MCP Bundle for local image generation workflows with dual-provider support for Google Gemini or OpenAI (gpt-image-2). The bundle exposes a create_asset MCP tool, validates requests defensively, uses bundled Node entry points for both the MCP server and the standalone CLI, and saves generated images directly to local disk for easy use in websites, documents, and presentations.",
   "author": {
     "name": "Claude Image Gen",
     "url": "https://github.com/guinacio/claude-image-gen"
@@ -20,6 +20,8 @@
   "license": "MIT",
   "keywords": [
     "gemini",
+    "openai",
+    "gpt-image",
     "image-generation",
     "mcp",
     "local",
@@ -34,6 +36,9 @@
       "env": {
         "GEMINI_API_KEY": "${user_config.GEMINI_API_KEY}",
         "GEMINI_DEFAULT_MODEL": "${user_config.GEMINI_DEFAULT_MODEL}",
+        "OPENAI_API_KEY": "${user_config.OPENAI_API_KEY}",
+        "OPENAI_DEFAULT_MODEL": "${user_config.OPENAI_DEFAULT_MODEL}",
+        "IMAGE_PROVIDER": "${user_config.IMAGE_PROVIDER}",
         "IMAGE_OUTPUT_DIR": "${user_config.IMAGE_OUTPUT_DIR}",
         "GEMINI_REQUEST_TIMEOUT_MS": "${user_config.GEMINI_REQUEST_TIMEOUT_MS}",
         "MEDIA_PIPELINE_LOG_LEVEL": "${user_config.MEDIA_PIPELINE_LOG_LEVEL}"
@@ -44,8 +49,8 @@
     "GEMINI_API_KEY": {
       "type": "string",
       "title": "Gemini API Key",
-      "description": "Your Google Gemini API key. Get one at https://aistudio.google.com/apikey",
-      "required": true,
+      "description": "Your Google Gemini API key. Get one at https://aistudio.google.com/apikey. At least one of the Gemini or OpenAI API keys must be provided.",
+      "required": false,
       "sensitive": true
     },
     "GEMINI_DEFAULT_MODEL": {
@@ -53,6 +58,25 @@
       "title": "Default Model",
       "description": "Preferred model for image generation. Available models are fetched dynamically from the Gemini API at runtime.",
       "default": "gemini-3-pro-image-preview"
+    },
+    "OPENAI_API_KEY": {
+      "type": "string",
+      "title": "OpenAI API Key",
+      "description": "Your OpenAI API key. Get one at https://platform.openai.com/api-keys. At least one of the Gemini or OpenAI API keys must be provided.",
+      "required": false,
+      "sensitive": true
+    },
+    "OPENAI_DEFAULT_MODEL": {
+      "type": "string",
+      "title": "Default OpenAI Model",
+      "description": "Preferred OpenAI model for image generation.",
+      "default": "gpt-image-2"
+    },
+    "IMAGE_PROVIDER": {
+      "type": "string",
+      "title": "Default Provider",
+      "description": "Which provider (gemini or openai) to use when a request omits a model. Controls the default model's provider; explicit gpt-image*/dall-e* model names always route to OpenAI regardless of this setting.",
+      "default": "gemini"
     },
     "IMAGE_OUTPUT_DIR": {
       "type": "directory",
@@ -77,17 +101,18 @@
   "tools": [
     {
       "name": "create_asset",
-      "description": "Generate an image with Google Gemini, save it locally, and return the output path plus structured metadata."
+      "description": "Generate an image with Google Gemini or OpenAI (gpt-image-2), save it locally, and return the output path plus structured metadata."
     }
   ],
   "compatibility": {
     "platforms": ["darwin", "win32", "linux"],
     "runtimes": {
-      "node": ">=18.0.0"
+      "node": ">=20.0.0"
     }
   },
   "privacy_policies": [
-    "https://policies.google.com/privacy"
+    "https://policies.google.com/privacy",
+    "https://openai.com/policies/privacy-policy"
   ]
 }
 

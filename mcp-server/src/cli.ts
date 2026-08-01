@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Standalone CLI for generating images using Google Gemini API.
+ * Standalone CLI for generating images using Google Gemini or OpenAI.
  * This path does not require the MCP server or stdio transport.
  *
  * Usage:
@@ -10,7 +10,7 @@
 import { parseArgs } from "node:util";
 import { MediaPipelineService } from "./media-pipeline-service.js";
 import { createAssetArgsSchema } from "./schemas.js";
-import { createLogger, createRuntimeConfig } from "./runtime.js";
+import { createLogger, createRuntimeConfig, hasAnyApiKey } from "./runtime.js";
 import { ASPECT_RATIOS } from "./types.js";
 
 function printHelp(): void {
@@ -21,21 +21,27 @@ Options:
   -p, --prompt <text>        Image description (required)
   -o, --output <path>        Output file path (optional, auto-generated if not provided)
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
-  -m, --model <model>        Model to use (validated dynamically against the API)
+  -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
+  -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
   -d, --output-dir <dir>     Output directory (default: current directory)
   -t, --timeout-ms <ms>      Gemini request timeout in milliseconds
   -l, --log-level <level>    Logging level: error, warn, info, debug
   -h, --help                 Show this help message
 
 Environment:
-  GEMINI_API_KEY             Your Gemini API key (required)
+  GEMINI_API_KEY             Your Gemini API key (at least one required)
+  OPENAI_API_KEY             Your OpenAI API key (at least one required)
   GEMINI_DEFAULT_MODEL       Preferred default model (optional)
+  OPENAI_DEFAULT_MODEL       Preferred default OpenAI model (optional, default gpt-image-2)
+  IMAGE_PROVIDER             gemini or openai — provider used when --model is omitted (optional)
   GEMINI_REQUEST_TIMEOUT_MS  Request timeout in milliseconds (optional)
   MEDIA_PIPELINE_LOG_LEVEL   Logging level for stderr diagnostics (optional)
 
 Examples:
   node build/cli.bundle.js -p "A sunset over mountains" -o "./sunset.png"
   node build/cli.bundle.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
+  node build/cli.bundle.js -p "Product photo" --model gpt-image-2 -o "./product.png"
+  node build/cli.bundle.js -p "Logo variant" -r "./ref1.png,./ref2.png" -r "./ref3.png"
 `);
 }
 
@@ -47,6 +53,7 @@ async function main(): Promise<void> {
         output: { type: "string", short: "o" },
         "aspect-ratio": { type: "string", short: "a", default: "1:1" },
         model: { type: "string", short: "m" },
+        "reference-images": { type: "string", short: "r", multiple: true },
         "output-dir": { type: "string", short: "d", default: process.cwd() },
         "timeout-ms": { type: "string", short: "t" },
         "log-level": { type: "string", short: "l" },
@@ -61,11 +68,18 @@ async function main(): Promise<void> {
       process.exit(0);
     }
 
+    const referenceImagesRaw = values["reference-images"] as string[] | undefined;
+    const referenceImages = referenceImagesRaw
+      ?.flatMap((entry) => entry.split(","))
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+
     const parsedArgs = createAssetArgsSchema.safeParse({
       prompt: values.prompt,
       outputPath: values.output,
       aspectRatio: values["aspect-ratio"],
       model: values.model,
+      referenceImages: referenceImages && referenceImages.length > 0 ? referenceImages : undefined,
     });
 
     if (!parsedArgs.success) {
@@ -91,11 +105,11 @@ async function main(): Promise<void> {
 
     const logger = createLogger("cli", runtimeConfig.logLevel);
 
-    if (!runtimeConfig.apiKey) {
+    if (!hasAnyApiKey(runtimeConfig)) {
       console.log(JSON.stringify({
         success: false,
         errorCode: "CONFIG_ERROR",
-        error: "GEMINI_API_KEY environment variable not set",
+        error: "No provider API key set: set GEMINI_API_KEY and/or OPENAI_API_KEY",
       }));
       process.exit(1);
     }

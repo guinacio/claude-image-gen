@@ -15,6 +15,10 @@ export const FALLBACK_IMAGE_MODELS = [
   "gemini-2.5-flash-image",
 ] as const;
 
+export const FALLBACK_OPENAI_IMAGE_MODELS = ["gpt-image-2"] as const;
+
+export type ImageProvider = "gemini" | "openai";
+
 export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 export const DEFAULT_LOG_LEVEL = "info";
 
@@ -42,6 +46,11 @@ export interface GenerateImageResult {
   error?: string;
   errorCode?: string;
   internalError?: string;
+  warnings?: string[];
+}
+
+export interface ImageProviderClient {
+  generateImage(input: GenerateImageInput): Promise<GenerateImageResult>;
 }
 
 export interface SavedImageResult {
@@ -59,8 +68,11 @@ export interface GeminiConfig {
 }
 
 export interface RuntimeConfig {
-  apiKey: string;
-  defaultModel: GeminiModel;
+  geminiApiKey: string;
+  openaiApiKey: string;
+  geminiDefaultModel: GeminiModel;
+  openaiDefaultModel: string;
+  defaultProvider: ImageProvider;
   outputDirectory: string;
   requestTimeoutMs: number;
   logLevel: LogLevel;

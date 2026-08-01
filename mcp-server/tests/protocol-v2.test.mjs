@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 
 function createClient() {
   const serverEntryPoint = path.join(process.cwd(), "build", "index.js");
@@ -16,15 +16,23 @@ function createClient() {
     },
   });
 
-  const client = new Client({
-    name: "media-pipeline-protocol-test",
-    version: "1.1.0",
-  });
+  const client = new Client(
+    {
+      name: "media-pipeline-protocol-v2-test",
+      version: "1.1.0",
+    },
+    {
+      // The v2 client defaults to the legacy handshake; pin the modern
+      // revision so this suite exercises the 2026-07-28 wire (the legacy
+      // path is covered by tests/protocol.test.mjs with the v1 client).
+      versionNegotiation: { mode: { pin: "2026-07-28" } },
+    }
+  );
 
   return { client, transport };
 }
 
-test("tools/list succeeds without model discovery and returns static metadata", async () => {
+test("v2: tools/list returns static metadata plus the configured cache hints", async () => {
   const { client, transport } = createClient();
 
   try {
@@ -33,13 +41,23 @@ test("tools/list succeeds without model discovery and returns static metadata", 
 
     assert.equal(toolList.tools.length, 1);
     assert.equal(toolList.tools[0].name, "create_asset");
+    assert.equal(toolList.tools[0].title, "Create Asset");
     assert.equal(toolList.tools[0].inputSchema.additionalProperties, false);
+    assert.equal(toolList.tools[0].outputSchema.additionalProperties, false);
+    assert.equal(toolList.tools[0].execution, undefined);
+
+    // ServerOptions.cacheHints['tools/list'] is emitted on the 2026-07-28 wire.
+    assert.equal(toolList.ttlMs, 300000);
+    assert.equal(toolList.cacheScope, "public");
+
+    // `resultType` is not asserted: the v2 client's wire codec consumes the
+    // discriminator while lifting the result, so it never reaches callers.
   } finally {
     await client.close();
   }
 });
 
-test("unknown tools are surfaced as protocol errors", async () => {
+test("v2: unknown tools are surfaced as protocol errors", async () => {
   const { client, transport } = createClient();
 
   try {
@@ -51,8 +69,6 @@ test("unknown tools are surfaced as protocol errors", async () => {
         arguments: {},
       }),
       (error) => {
-        // The v2 SDK owns unknown-tool rejection now; it answers the legacy
-        // client with the same -32602 code but its own message text.
         assert.equal(error.code, -32602);
         assert.match(error.message, /Tool unknown_tool not found/);
         return true;
@@ -63,7 +79,7 @@ test("unknown tools are surfaced as protocol errors", async () => {
   }
 });
 
-test("validation failures return sanitized JSON tool results", async () => {
+test("v2: validation failures return sanitized JSON tool results", async () => {
   const { client, transport } = createClient();
 
   try {

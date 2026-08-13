@@ -21,6 +21,7 @@ generated-images/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log
@@ -31,3 +32,9 @@ npm-debug.log*
 
 # Claude
 .claude/
+
+# Fork-local scratch — must never reach an upstream PR
+NOTAS-*.md
+*.local.md
+/local/
+/scratch/

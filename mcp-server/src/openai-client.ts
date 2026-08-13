@@ -96,6 +96,86 @@ export function resolveOutputOptions(
   return { background, outputFormat: outputFormat ?? "png" };
 }
 
+export interface ObservedRejection {
+  /** Model ids this rejection was actually observed on. */
+  models: RegExp;
+  /** The option, written the way a caller passes it. */
+  option: string;
+  /** What the API answered, verbatim, when this was observed. */
+  apiMessage: string;
+}
+
+/**
+ * Options that a given model is known to reject, recorded from real API
+ * responses.
+ *
+ * This is deliberately a list of *observed failures*, not a capability matrix.
+ * Declaring what each model supports would mean maintaining a table that goes
+ * stale the moment a model ships, and silently disabling options on models that
+ * do support them. Recording only what was seen to fail keeps unknown
+ * combinations flowing through to the API, which is the authority on them --
+ * and when the API refuses, describeOpenAIFailure passes its reason back.
+ *
+ * Verified as of 2026-08:
+ *   gpt-image-2  background: "transparent"  -> 400, entry below
+ *   gpt-image-2  no background/outputFormat -> works, on both generate and edit
+ * Not verified on any model: mask, outputFormat, background auto/opaque, and
+ * every option on gpt-image-1 and dall-e models.
+ */
+const OBSERVED_MODEL_REJECTIONS: readonly ObservedRejection[] = [
+  {
+    models: /^gpt-image-2/,
+    option: 'background: "transparent"',
+    apiMessage: "Transparent background is not supported for this model.",
+  },
+];
+
+/**
+ * Returns the recorded rejection for a model/option pair, when there is one.
+ * A miss means "not known to fail", never "known to work".
+ */
+export function findObservedRejection(
+  model: string | undefined,
+  options: { background?: ImageBackground }
+): ObservedRejection | undefined {
+  if (!model || options.background !== "transparent") {
+    return undefined;
+  }
+
+  return OBSERVED_MODEL_REJECTIONS.find(
+    (rejection) =>
+      rejection.option === 'background: "transparent"' &&
+      rejection.models.test(model)
+  );
+}
+
+/**
+ * Turns a thrown request failure into a caller-facing message.
+ *
+ * Client-side (4xx) failures describe what was wrong with the caller's own
+ * request -- which option a model refused, and why -- so that text is passed
+ * through. Server-side and transport failures stay generic, because their
+ * wording describes infrastructure rather than anything the caller can act on.
+ */
+export function describeOpenAIFailure(error: unknown): {
+  error: string;
+  internalError: string;
+} {
+  const internalError = error instanceof Error ? error.message : String(error);
+
+  const status =
+    error instanceof OpenAI.APIError ? error.status : undefined;
+
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    return {
+      error: `OpenAI rejected the request: ${internalError}`,
+      internalError,
+    };
+  }
+
+  return { error: "OpenAI image generation failed.", internalError };
+}
+
 /**
  * Fetches the image-capable model ids exposed by the OpenAI API.
  * Throws on failure so callers can decide how to fall back.
@@ -196,6 +276,19 @@ export class OpenAIImageClient implements ImageProviderClient {
         };
       }
 
+      const rejection = findObservedRejection(modelName, {
+        background: outputOptions.background,
+      });
+
+      if (rejection) {
+        return {
+          success: false,
+          errorCode: "OPTION_UNSUPPORTED_BY_MODEL",
+          error: `${rejection.option} is not supported by ${modelName}. The API answers: "${rejection.apiMessage}". Whether other models accept this option has not been verified.`,
+          warnings,
+        };
+      }
+
       // gpt-image models always return base64 payloads, so response_format is
       // never sent. input_fidelity is left to the model default as well.
       const sharedOptions = {
@@ -260,15 +353,21 @@ export class OpenAIImageClient implements ImageProviderClient {
         warnings,
       };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      if (controller.signal.aborted) {
+        return {
+          success: false,
+          errorCode: "REQUEST_TIMEOUT",
+          error: `Image generation timed out after ${timeoutMs}ms.`,
+          internalError: error instanceof Error ? error.message : String(error),
+        };
+      }
+
+      const described = describeOpenAIFailure(error);
       return {
         success: false,
-        errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "OPENAI_API_ERROR",
-        error: controller.signal.aborted
-          ? `Image generation timed out after ${timeoutMs}ms.`
-          : "OpenAI image generation failed.",
-        internalError: errorMessage,
+        errorCode: "OPENAI_API_ERROR",
+        error: described.error,
+        internalError: described.internalError,
       };
     } finally {
       clearTimeout(timeoutId);

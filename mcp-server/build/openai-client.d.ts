@@ -27,6 +27,33 @@ export interface ResolvedOutputOptions {
  * asking for transparency is enough to actually get it.
  */
 export declare function resolveOutputOptions(background: ImageBackground | undefined, outputFormat: ImageOutputFormat | undefined): ResolvedOutputOptions;
+export interface ObservedRejection {
+    /** Model ids this rejection was actually observed on. */
+    models: RegExp;
+    /** The option, written the way a caller passes it. */
+    option: string;
+    /** What the API answered, verbatim, when this was observed. */
+    apiMessage: string;
+}
+/**
+ * Returns the recorded rejection for a model/option pair, when there is one.
+ * A miss means "not known to fail", never "known to work".
+ */
+export declare function findObservedRejection(model: string | undefined, options: {
+    background?: ImageBackground;
+}): ObservedRejection | undefined;
+/**
+ * Turns a thrown request failure into a caller-facing message.
+ *
+ * Client-side (4xx) failures describe what was wrong with the caller's own
+ * request -- which option a model refused, and why -- so that text is passed
+ * through. Server-side and transport failures stay generic, because their
+ * wording describes infrastructure rather than anything the caller can act on.
+ */
+export declare function describeOpenAIFailure(error: unknown): {
+    error: string;
+    internalError: string;
+};
 /**
  * Fetches the image-capable model ids exposed by the OpenAI API.
  * Throws on failure so callers can decide how to fall back.

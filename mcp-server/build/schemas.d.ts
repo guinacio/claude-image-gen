@@ -47,7 +47,7 @@ export declare const createAssetInputSchema: {
         };
         readonly mask: {
             readonly type: "string";
-            readonly description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only — Gemini models reject it.";
+            readonly description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.";
             readonly minLength: 1;
             readonly maxLength: 1024;
         };
@@ -65,12 +65,12 @@ export declare const createAssetInputSchema: {
         readonly background: {
             readonly type: "string";
             readonly enum: readonly ["auto", "transparent", "opaque"];
-            readonly description: "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only — Gemini models reject it.";
+            readonly description: "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only — Gemini models reject it. Verified: gpt-image-2 refuses transparent (400 \"Transparent background is not supported for this model\"), and that combination is rejected before the request is sent. Whether other models accept transparent, and whether any model accepts auto or opaque, has not been verified.";
         };
         readonly outputFormat: {
             readonly type: "string";
             readonly enum: readonly ["png", "jpeg", "webp"];
-            readonly description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini models reject it.";
+            readonly description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.";
         };
         readonly model: {
             readonly type: "string";

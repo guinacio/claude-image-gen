@@ -78830,6 +78830,30 @@ function resolveOutputOptions(background, outputFormat) {
   }
   return { background, outputFormat: outputFormat ?? "png" };
 }
+var OBSERVED_MODEL_REJECTIONS = [
+  {
+    models: /^gpt-image-2/,
+    option: 'background: "transparent"',
+    apiMessage: "Transparent background is not supported for this model."
+  }
+];
+function findObservedRejection(model, options) {
+  if (!model || options.background !== "transparent") {
+    return void 0;
+  }
+  return OBSERVED_MODEL_REJECTIONS.find((rejection2) => rejection2.option === 'background: "transparent"' && rejection2.models.test(model));
+}
+function describeOpenAIFailure(error51) {
+  const internalError = error51 instanceof Error ? error51.message : String(error51);
+  const status = error51 instanceof OpenAI.APIError ? error51.status : void 0;
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    return {
+      error: `OpenAI rejected the request: ${internalError}`,
+      internalError
+    };
+  }
+  return { error: "OpenAI image generation failed.", internalError };
+}
 async function fetchOpenAIImageModels(apiKey, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const client = new OpenAI({ apiKey, timeout: timeoutMs, maxRetries: 0 });
   const controller = new AbortController();
@@ -78902,6 +78926,17 @@ var OpenAIImageClient = class {
           warnings
         };
       }
+      const rejection2 = findObservedRejection(modelName, {
+        background: outputOptions.background
+      });
+      if (rejection2) {
+        return {
+          success: false,
+          errorCode: "OPTION_UNSUPPORTED_BY_MODEL",
+          error: `${rejection2.option} is not supported by ${modelName}. The API answers: "${rejection2.apiMessage}". Whether other models accept this option has not been verified.`,
+          warnings
+        };
+      }
       const sharedOptions = {
         model: modelName,
         prompt: input.prompt,
@@ -78939,12 +78974,20 @@ var OpenAIImageClient = class {
         warnings
       };
     } catch (error51) {
-      const errorMessage = error51 instanceof Error ? error51.message : String(error51);
+      if (controller.signal.aborted) {
+        return {
+          success: false,
+          errorCode: "REQUEST_TIMEOUT",
+          error: `Image generation timed out after ${timeoutMs}ms.`,
+          internalError: error51 instanceof Error ? error51.message : String(error51)
+        };
+      }
+      const described = describeOpenAIFailure(error51);
       return {
         success: false,
-        errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "OPENAI_API_ERROR",
-        error: controller.signal.aborted ? `Image generation timed out after ${timeoutMs}ms.` : "OpenAI image generation failed.",
-        internalError: errorMessage
+        errorCode: "OPENAI_API_ERROR",
+        error: described.error,
+        internalError: described.internalError
       };
     } finally {
       clearTimeout(timeoutId);
@@ -79615,7 +79658,7 @@ var createAssetInputSchema = {
     },
     mask: {
       type: "string",
-      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only \u2014 Gemini models reject it.",
+      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
       minLength: 1,
       maxLength: 1024
     },
@@ -79633,12 +79676,12 @@ var createAssetInputSchema = {
     background: {
       type: "string",
       enum: [...IMAGE_BACKGROUNDS],
-      description: "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only \u2014 Gemini models reject it."
+      description: 'Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only \u2014 Gemini models reject it. Verified: gpt-image-2 refuses transparent (400 "Transparent background is not supported for this model"), and that combination is rejected before the request is sent. Whether other models accept transparent, and whether any model accepts auto or opaque, has not been verified.'
     },
     outputFormat: {
       type: "string",
       enum: [...IMAGE_OUTPUT_FORMATS],
-      description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only \u2014 Gemini models reject it."
+      description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned."
     },
     model: {
       type: "string",

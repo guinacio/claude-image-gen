@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import OpenAI from "openai";
 import {
+  describeOpenAIFailure,
+  findObservedRejection,
   mapAspectRatioToOpenAISize,
   resolveOutputOptions,
 } from "../build/openai-client.js";
@@ -103,4 +106,67 @@ test("resolveOutputOptions rejects transparency on a format without alpha", () =
   assert.ok(result.error.includes("png"), "error names an accepted format");
   assert.equal(result.background, undefined);
   assert.equal(result.outputFormat, undefined);
+});
+
+test("findObservedRejection reports the recorded gpt-image-2 transparency refusal", () => {
+  const rejection = findObservedRejection("gpt-image-2", {
+    background: "transparent",
+  });
+
+  assert.ok(rejection, "expected a recorded rejection");
+  assert.match(rejection.option, /transparent/);
+  assert.equal(
+    rejection.apiMessage,
+    "Transparent background is not supported for this model."
+  );
+});
+
+test("findObservedRejection stays silent for backgrounds that were never seen to fail", () => {
+  for (const background of [undefined, "auto", "opaque"]) {
+    assert.equal(
+      findObservedRejection("gpt-image-2", { background }),
+      undefined,
+      `background ${background}`
+    );
+  }
+});
+
+test("findObservedRejection does not generalise to unrecorded models", () => {
+  for (const model of ["gpt-image-1", "dall-e-3", undefined]) {
+    assert.equal(
+      findObservedRejection(model, { background: "transparent" }),
+      undefined,
+      `model ${model}`
+    );
+  }
+});
+
+test("describeOpenAIFailure passes a 4xx refusal through to the caller", () => {
+  const apiError = new OpenAI.APIError(
+    400,
+    undefined,
+    "400 Transparent background is not supported for this model.",
+    undefined
+  );
+
+  const described = describeOpenAIFailure(apiError);
+
+  assert.match(described.error, /Transparent background is not supported/);
+  assert.match(described.internalError, /Transparent background is not supported/);
+});
+
+test("describeOpenAIFailure keeps server-side failures generic", () => {
+  const apiError = new OpenAI.APIError(503, undefined, "503 upstream boom", undefined);
+
+  const described = describeOpenAIFailure(apiError);
+
+  assert.equal(described.error, "OpenAI image generation failed.");
+  assert.match(described.internalError, /upstream boom/);
+});
+
+test("describeOpenAIFailure keeps transport failures generic", () => {
+  const described = describeOpenAIFailure(new Error("ECONNRESET at 10.0.0.1"));
+
+  assert.equal(described.error, "OpenAI image generation failed.");
+  assert.match(described.internalError, /ECONNRESET/);
 });

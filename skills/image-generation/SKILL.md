@@ -49,7 +49,7 @@ node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
 | --model, -m | No | provider default | Model to use; routes the provider (gpt-image*/dall-e* → OpenAI, others → Gemini) |
 | --reference-images, -r | No | - | Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5) |
 | --mask | No | - | PNG mask marking the region to repaint; OpenAI only, requires --reference-images |
-| --background, -b | No | provider default | auto, transparent or opaque; OpenAI only |
+| --background, -b | No | provider default | auto, transparent or opaque; OpenAI only. `gpt-image-2` refuses `transparent` and is rejected before the request is sent |
 | --output-format, -f | No | provider default | png, jpeg or webp; OpenAI only |
 | --output-dir, -d | No | current directory | Output directory |
 

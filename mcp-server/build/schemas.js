@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ASPECT_RATIOS } from "./types.js";
+import { ASPECT_RATIOS, IMAGE_BACKGROUNDS, IMAGE_OUTPUT_FORMATS, } from "./types.js";
 export const createAssetArgsSchema = z
     .strictObject({
     prompt: z
@@ -19,6 +19,13 @@ export const createAssetArgsSchema = z
         .max(5, "Maximum 5 reference images")
         .optional()
         .describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
+    mask: z
+        .string()
+        .trim()
+        .min(1, "Mask path cannot be empty")
+        .max(1024, "Mask path must be at most 1024 characters long")
+        .optional()
+        .describe("Absolute path to a PNG mask marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
     outputPath: z
         .string()
         .trim()
@@ -30,6 +37,14 @@ export const createAssetArgsSchema = z
         .enum(ASPECT_RATIOS)
         .optional()
         .describe("Image aspect ratio (default: 1:1)"),
+    background: z
+        .enum(IMAGE_BACKGROUNDS)
+        .optional()
+        .describe("Background handling; transparent requires an alpha-capable format. OpenAI models only"),
+    outputFormat: z
+        .enum(IMAGE_OUTPUT_FORMATS)
+        .optional()
+        .describe("Encoding of the returned image. OpenAI models only"),
     model: z
         .string()
         .trim()
@@ -58,6 +73,12 @@ export const createAssetInputSchema = {
             },
             maxItems: 5,
         },
+        mask: {
+            type: "string",
+            description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only — Gemini models reject it.",
+            minLength: 1,
+            maxLength: 1024,
+        },
         outputPath: {
             type: "string",
             description: "Optional custom output file path inside the configured output directory. Both relative and absolute paths must stay within that directory.",
@@ -68,6 +89,16 @@ export const createAssetInputSchema = {
             type: "string",
             enum: [...ASPECT_RATIOS],
             description: "Aspect ratio for the generated image. Use 16:9 for hero images/headers, 1:1 for thumbnails/social, 9:16 for mobile/stories. Default: 1:1.",
+        },
+        background: {
+            type: "string",
+            enum: [...IMAGE_BACKGROUNDS],
+            description: "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only — Gemini models reject it.",
+        },
+        outputFormat: {
+            type: "string",
+            enum: [...IMAGE_OUTPUT_FORMATS],
+            description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini models reject it.",
         },
         model: {
             type: "string",

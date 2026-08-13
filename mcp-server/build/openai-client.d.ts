@@ -1,4 +1,4 @@
-import type { AspectRatio, GenerateImageInput, GenerateImageResult, ImageProviderClient } from "./types.js";
+import type { AspectRatio, GenerateImageInput, GenerateImageResult, ImageBackground, ImageOutputFormat, ImageProviderClient } from "./types.js";
 export type OpenAIImageSize = "1024x1024" | "1536x1024" | "1024x1536";
 export interface OpenAIConfig {
     apiKey: string;
@@ -13,6 +13,20 @@ export declare function mapAspectRatioToOpenAISize(aspectRatio: AspectRatio | un
     size: OpenAIImageSize;
     warning?: string;
 };
+export interface ResolvedOutputOptions {
+    background?: ImageBackground;
+    outputFormat?: ImageOutputFormat;
+    error?: string;
+}
+/**
+ * Reconciles the requested background with the requested output format.
+ *
+ * A transparent background needs an alpha channel, which JPEG cannot carry. An
+ * explicit JPEG request is a contradiction and is rejected rather than silently
+ * flattened; when no format was requested at all, PNG is selected so that
+ * asking for transparency is enough to actually get it.
+ */
+export declare function resolveOutputOptions(background: ImageBackground | undefined, outputFormat: ImageOutputFormat | undefined): ResolvedOutputOptions;
 /**
  * Fetches the image-capable model ids exposed by the OpenAI API.
  * Throws on failure so callers can decide how to fall back.

@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mapAspectRatioToOpenAISize } from "../build/openai-client.js";
+import {
+  mapAspectRatioToOpenAISize,
+  resolveOutputOptions,
+} from "../build/openai-client.js";
 
 test("mapAspectRatioToOpenAISize maps exact ratios without warnings", () => {
   const exactCases = [
@@ -60,4 +63,44 @@ test("mapAspectRatioToOpenAISize warning explains the OpenAI limitation", () => 
     result.warning,
     "Aspect ratio 16:9 is not supported by OpenAI image models; generated at 3:2 (1536x1024) instead."
   );
+});
+
+test("resolveOutputOptions passes non-transparent requests through untouched", () => {
+  for (const background of [undefined, "auto", "opaque"]) {
+    for (const outputFormat of [undefined, "png", "jpeg", "webp"]) {
+      const result = resolveOutputOptions(background, outputFormat);
+
+      assert.equal(result.background, background);
+      assert.equal(result.outputFormat, outputFormat);
+      assert.equal(result.error, undefined);
+    }
+  }
+});
+
+test("resolveOutputOptions defaults a transparent background to png", () => {
+  const result = resolveOutputOptions("transparent", undefined);
+
+  assert.equal(result.background, "transparent");
+  assert.equal(result.outputFormat, "png");
+  assert.equal(result.error, undefined);
+});
+
+test("resolveOutputOptions keeps an explicit alpha-capable format", () => {
+  for (const outputFormat of ["png", "webp"]) {
+    const result = resolveOutputOptions("transparent", outputFormat);
+
+    assert.equal(result.background, "transparent");
+    assert.equal(result.outputFormat, outputFormat);
+    assert.equal(result.error, undefined);
+  }
+});
+
+test("resolveOutputOptions rejects transparency on a format without alpha", () => {
+  const result = resolveOutputOptions("transparent", "jpeg");
+
+  assert.ok(result.error, "expected an error");
+  assert.ok(result.error.includes("jpeg"), "error names the offending format");
+  assert.ok(result.error.includes("png"), "error names an accepted format");
+  assert.equal(result.background, undefined);
+  assert.equal(result.outputFormat, undefined);
 });

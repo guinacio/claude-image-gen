@@ -38500,6 +38500,12 @@ var ASPECT_RATIOS = [
   "16:9",
   "9:16"
 ];
+var IMAGE_BACKGROUNDS = ["auto", "transparent", "opaque"];
+var IMAGE_OUTPUT_FORMATS = ["png", "jpeg", "webp"];
+var ALPHA_CAPABLE_OUTPUT_FORMATS = [
+  "png",
+  "webp"
+];
 var FALLBACK_IMAGE_MODELS = [
   "gemini-3-pro-image-preview",
   "gemini-2.5-flash-image"
@@ -38546,6 +38552,18 @@ var GeminiImageClient = class {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const modelName = input.model || this.config.defaultModel;
+      const unsupportedOptions = [
+        input.mask ? "mask" : void 0,
+        input.background ? "background" : void 0,
+        input.outputFormat ? "outputFormat" : void 0
+      ].filter((option) => option !== void 0);
+      if (unsupportedOptions.length > 0) {
+        return {
+          success: false,
+          errorCode: "UNSUPPORTED_BY_PROVIDER",
+          error: `${unsupportedOptions.join(", ")} ${unsupportedOptions.length === 1 ? "is" : "are"} only supported by OpenAI image models; model "${modelName}" routes to Gemini.`
+        };
+      }
       const generationConfig = {
         responseModalities: ["TEXT", "IMAGE"],
         abortSignal: controller.signal,
@@ -49627,6 +49645,17 @@ function mapAspectRatioToOpenAISize(aspectRatio) {
     warning: `Aspect ratio ${aspectRatio} is not supported by OpenAI image models; generated at ${mapping.deliveredRatio} (${mapping.size}) instead.`
   };
 }
+function resolveOutputOptions(background, outputFormat) {
+  if (background !== "transparent") {
+    return { background, outputFormat };
+  }
+  if (outputFormat && !ALPHA_CAPABLE_OUTPUT_FORMATS.includes(outputFormat)) {
+    return {
+      error: `A transparent background requires an output format with an alpha channel (${ALPHA_CAPABLE_OUTPUT_FORMATS.join(" or ")}); "${outputFormat}" cannot carry one.`
+    };
+  }
+  return { background, outputFormat: outputFormat ?? "png" };
+}
 async function fetchOpenAIImageModels(apiKey, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const client = new OpenAI({ apiKey, timeout: timeoutMs, maxRetries: 0 });
   const controller = new AbortController();
@@ -49681,23 +49710,44 @@ var OpenAIImageClient = class {
         timeout: timeoutMs,
         signal: controller.signal
       };
+      const hasReferenceImages = Boolean(input.referenceImages && input.referenceImages.length > 0);
+      if (input.mask && !hasReferenceImages) {
+        return {
+          success: false,
+          errorCode: "MASK_WITHOUT_REFERENCE_IMAGE",
+          error: "A mask can only be used together with referenceImages, since it marks the region of the base image to repaint.",
+          warnings
+        };
+      }
+      const outputOptions = resolveOutputOptions(input.background, input.outputFormat);
+      if (outputOptions.error) {
+        return {
+          success: false,
+          errorCode: "INCOMPATIBLE_OUTPUT_OPTIONS",
+          error: outputOptions.error,
+          warnings
+        };
+      }
+      const sharedOptions = {
+        model: modelName,
+        prompt: input.prompt,
+        size,
+        ...outputOptions.background ? { background: outputOptions.background } : {},
+        ...outputOptions.outputFormat ? { output_format: outputOptions.outputFormat } : {}
+      };
       let response;
-      if (input.referenceImages && input.referenceImages.length > 0) {
+      if (hasReferenceImages) {
         const image = await Promise.all(input.referenceImages.map((ref) => toFile2(Buffer.from(ref.base64Data, "base64"), basename3(ref.filePath), {
           type: ref.mimeType
         })));
+        const mask = input.mask ? await toFile2(Buffer.from(input.mask.base64Data, "base64"), basename3(input.mask.filePath), { type: input.mask.mimeType }) : void 0;
         response = await this.client.images.edit({
-          model: modelName,
+          ...sharedOptions,
           image,
-          prompt: input.prompt,
-          size
+          ...mask ? { mask } : {}
         }, requestOptions);
       } else {
-        response = await this.client.images.generate({
-          model: modelName,
-          prompt: input.prompt,
-          size
-        }, requestOptions);
+        response = await this.client.images.generate(sharedOptions, requestOptions);
       }
       const base64Data = response.data?.[0]?.b64_json;
       if (!base64Data) {
@@ -50257,10 +50307,36 @@ var MediaPipelineService = class {
       }
       referenceImages = loaded.images;
     }
+    let mask;
+    if (request.mask) {
+      const loaded = loadReferenceImages([request.mask], this.logger);
+      if (!loaded.success) {
+        return {
+          success: false,
+          errorCode: loaded.errorCode,
+          error: loaded.error,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings
+        };
+      }
+      mask = loaded.images[0];
+      if (mask.mimeType !== "image/png") {
+        return {
+          success: false,
+          errorCode: "MASK_UNSUPPORTED_TYPE",
+          error: `Mask "${request.mask}" must be a PNG file with an alpha channel.`,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings
+        };
+      }
+    }
     const generated = await client.generateImage({
       prompt: request.prompt,
       referenceImages,
+      mask,
       aspectRatio: request.aspectRatio,
+      background: request.background,
+      outputFormat: request.outputFormat,
       model: selectedModel,
       timeoutMs: this.config.requestTimeoutMs
     });
@@ -64847,8 +64923,11 @@ var createAssetArgsSchema = external_exports.strictObject({
     error: (issue2) => issue2.input === void 0 ? "Required" : void 0
   }).trim().min(1, "Prompt is required").max(1e4, "Prompt must be at most 10000 characters long").describe("Detailed description of the image to generate"),
   referenceImages: external_exports.array(external_exports.string().trim().min(1, "Reference image path cannot be empty").max(1024, "Reference image path must be at most 1024 characters long")).max(5, "Maximum 5 reference images").optional().describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
+  mask: external_exports.string().trim().min(1, "Mask path cannot be empty").max(1024, "Mask path must be at most 1024 characters long").optional().describe("Absolute path to a PNG mask marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
   outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path inside the configured output directory"),
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
+  background: external_exports.enum(IMAGE_BACKGROUNDS).optional().describe("Background handling; transparent requires an alpha-capable format. OpenAI models only"),
+  outputFormat: external_exports.enum(IMAGE_OUTPUT_FORMATS).optional().describe("Encoding of the returned image. OpenAI models only"),
   model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)")
 });
 var createAssetInputSchema = {
@@ -64871,6 +64950,12 @@ var createAssetInputSchema = {
       },
       maxItems: 5
     },
+    mask: {
+      type: "string",
+      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only \u2014 Gemini models reject it.",
+      minLength: 1,
+      maxLength: 1024
+    },
     outputPath: {
       type: "string",
       description: "Optional custom output file path inside the configured output directory. Both relative and absolute paths must stay within that directory.",
@@ -64881,6 +64966,16 @@ var createAssetInputSchema = {
       type: "string",
       enum: [...ASPECT_RATIOS],
       description: "Aspect ratio for the generated image. Use 16:9 for hero images/headers, 1:1 for thumbnails/social, 9:16 for mobile/stories. Default: 1:1."
+    },
+    background: {
+      type: "string",
+      enum: [...IMAGE_BACKGROUNDS],
+      description: "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only \u2014 Gemini models reject it."
+    },
+    outputFormat: {
+      type: "string",
+      enum: [...IMAGE_OUTPUT_FORMATS],
+      description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only \u2014 Gemini models reject it."
     },
     model: {
       type: "string",
@@ -64958,6 +65053,9 @@ Options:
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
   -m, --model <model>        Model to use (gpt-image*/dall-e* \u2192 OpenAI, others \u2192 Gemini; validated dynamically)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
+      --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
+  -b, --background <mode>    auto, transparent or opaque (OpenAI only)
+  -f, --output-format <fmt>  png, jpeg or webp (OpenAI only)
   -d, --output-dir <dir>     Output directory (default: current directory)
   -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
@@ -64988,6 +65086,9 @@ async function main() {
         "aspect-ratio": { type: "string", short: "a", default: "1:1" },
         model: { type: "string", short: "m" },
         "reference-images": { type: "string", short: "r", multiple: true },
+        mask: { type: "string" },
+        background: { type: "string", short: "b" },
+        "output-format": { type: "string", short: "f" },
         "output-dir": { type: "string", short: "d", default: process.cwd() },
         "timeout-ms": { type: "string", short: "t" },
         "log-level": { type: "string", short: "l" },
@@ -65006,7 +65107,10 @@ async function main() {
       outputPath: values.output,
       aspectRatio: values["aspect-ratio"],
       model: values.model,
-      referenceImages: referenceImages && referenceImages.length > 0 ? referenceImages : void 0
+      referenceImages: referenceImages && referenceImages.length > 0 ? referenceImages : void 0,
+      mask: values.mask,
+      background: values.background,
+      outputFormat: values["output-format"]
     });
     if (!parsedArgs.success) {
       console.log(JSON.stringify({

@@ -2,6 +2,7 @@ import { z } from "zod";
 export declare const createAssetArgsSchema: z.ZodObject<{
     prompt: z.ZodString;
     referenceImages: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    mask: z.ZodOptional<z.ZodString>;
     outputPath: z.ZodOptional<z.ZodString>;
     aspectRatio: z.ZodOptional<z.ZodEnum<{
         "1:1": "1:1";
@@ -11,6 +12,16 @@ export declare const createAssetArgsSchema: z.ZodObject<{
         "4:3": "4:3";
         "16:9": "16:9";
         "9:16": "9:16";
+    }>>;
+    background: z.ZodOptional<z.ZodEnum<{
+        auto: "auto";
+        transparent: "transparent";
+        opaque: "opaque";
+    }>>;
+    outputFormat: z.ZodOptional<z.ZodEnum<{
+        png: "png";
+        jpeg: "jpeg";
+        webp: "webp";
     }>>;
     model: z.ZodOptional<z.ZodString>;
 }, z.core.$strict>;
@@ -34,6 +45,12 @@ export declare const createAssetInputSchema: {
             };
             readonly maxItems: 5;
         };
+        readonly mask: {
+            readonly type: "string";
+            readonly description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only — Gemini models reject it.";
+            readonly minLength: 1;
+            readonly maxLength: 1024;
+        };
         readonly outputPath: {
             readonly type: "string";
             readonly description: "Optional custom output file path inside the configured output directory. Both relative and absolute paths must stay within that directory.";
@@ -44,6 +61,16 @@ export declare const createAssetInputSchema: {
             readonly type: "string";
             readonly enum: readonly ["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"];
             readonly description: "Aspect ratio for the generated image. Use 16:9 for hero images/headers, 1:1 for thumbnails/social, 9:16 for mobile/stories. Default: 1:1.";
+        };
+        readonly background: {
+            readonly type: "string";
+            readonly enum: readonly ["auto", "transparent", "opaque"];
+            readonly description: "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only — Gemini models reject it.";
+        };
+        readonly outputFormat: {
+            readonly type: "string";
+            readonly enum: readonly ["png", "jpeg", "webp"];
+            readonly description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini models reject it.";
         };
         readonly model: {
             readonly type: "string";

@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import OpenAI, { toFile } from "openai";
-import { DEFAULT_REQUEST_TIMEOUT_MS } from "./types.js";
+import { ALPHA_CAPABLE_OUTPUT_FORMATS, DEFAULT_REQUEST_TIMEOUT_MS, } from "./types.js";
 const OPENAI_IMAGE_MODEL_PATTERN = /^(gpt-image|dall-e)/;
 const ASPECT_RATIO_SIZES = {
     "1:1": { size: "1024x1024", deliveredRatio: "1:1" },
@@ -31,6 +31,25 @@ export function mapAspectRatioToOpenAISize(aspectRatio) {
         size: mapping.size,
         warning: `Aspect ratio ${aspectRatio} is not supported by OpenAI image models; generated at ${mapping.deliveredRatio} (${mapping.size}) instead.`,
     };
+}
+/**
+ * Reconciles the requested background with the requested output format.
+ *
+ * A transparent background needs an alpha channel, which JPEG cannot carry. An
+ * explicit JPEG request is a contradiction and is rejected rather than silently
+ * flattened; when no format was requested at all, PNG is selected so that
+ * asking for transparency is enough to actually get it.
+ */
+export function resolveOutputOptions(background, outputFormat) {
+    if (background !== "transparent") {
+        return { background, outputFormat };
+    }
+    if (outputFormat && !ALPHA_CAPABLE_OUTPUT_FORMATS.includes(outputFormat)) {
+        return {
+            error: `A transparent background requires an output format with an alpha channel (${ALPHA_CAPABLE_OUTPUT_FORMATS.join(" or ")}); "${outputFormat}" cannot carry one.`,
+        };
+    }
+    return { background, outputFormat: outputFormat ?? "png" };
 }
 /**
  * Fetches the image-capable model ids exposed by the OpenAI API.
@@ -91,26 +110,55 @@ export class OpenAIImageClient {
                 timeout: timeoutMs,
                 signal: controller.signal,
             };
+            const hasReferenceImages = Boolean(input.referenceImages && input.referenceImages.length > 0);
+            // A mask marks which region of the base image to repaint, so it only has
+            // meaning when there is a base image to edit.
+            if (input.mask && !hasReferenceImages) {
+                return {
+                    success: false,
+                    errorCode: "MASK_WITHOUT_REFERENCE_IMAGE",
+                    error: "A mask can only be used together with referenceImages, since it marks the region of the base image to repaint.",
+                    warnings,
+                };
+            }
+            const outputOptions = resolveOutputOptions(input.background, input.outputFormat);
+            if (outputOptions.error) {
+                return {
+                    success: false,
+                    errorCode: "INCOMPATIBLE_OUTPUT_OPTIONS",
+                    error: outputOptions.error,
+                    warnings,
+                };
+            }
             // gpt-image models always return base64 payloads, so response_format is
             // never sent. input_fidelity is left to the model default as well.
+            const sharedOptions = {
+                model: modelName,
+                prompt: input.prompt,
+                size,
+                ...(outputOptions.background
+                    ? { background: outputOptions.background }
+                    : {}),
+                ...(outputOptions.outputFormat
+                    ? { output_format: outputOptions.outputFormat }
+                    : {}),
+            };
             let response;
-            if (input.referenceImages && input.referenceImages.length > 0) {
+            if (hasReferenceImages) {
                 const image = await Promise.all(input.referenceImages.map((ref) => toFile(Buffer.from(ref.base64Data, "base64"), basename(ref.filePath), {
                     type: ref.mimeType,
                 })));
+                const mask = input.mask
+                    ? await toFile(Buffer.from(input.mask.base64Data, "base64"), basename(input.mask.filePath), { type: input.mask.mimeType })
+                    : undefined;
                 response = await this.client.images.edit({
-                    model: modelName,
+                    ...sharedOptions,
                     image,
-                    prompt: input.prompt,
-                    size,
+                    ...(mask ? { mask } : {}),
                 }, requestOptions);
             }
             else {
-                response = await this.client.images.generate({
-                    model: modelName,
-                    prompt: input.prompt,
-                    size,
-                }, requestOptions);
+                response = await this.client.images.generate(sharedOptions, requestOptions);
             }
             const base64Data = response.data?.[0]?.b64_json;
             if (!base64Data) {

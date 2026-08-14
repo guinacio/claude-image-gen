@@ -49796,7 +49796,7 @@ var OpenAIImageClient = class {
       return {
         success: true,
         base64Data,
-        mimeType: mimeTypeForOutputFormat(response.output_format),
+        mimeType: mimeTypeForOutputFormat(response.output_format ?? outputOptions.outputFormat),
         warnings
       };
     } catch (error51) {

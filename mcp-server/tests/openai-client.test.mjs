@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import OpenAI from "openai";
 import {
+  OpenAIImageClient,
   describeOpenAIFailure,
   findObservedRejection,
   mapAspectRatioToOpenAISize,
@@ -169,4 +170,34 @@ test("describeOpenAIFailure keeps transport failures generic", () => {
 
   assert.equal(described.error, "OpenAI image generation failed.");
   assert.match(described.internalError, /ECONNRESET/);
+});
+
+test("generateImage uses the requested format when the response omits output_format", async () => {
+  for (const [outputFormat, expectedMimeType] of [
+    ["jpeg", "image/jpeg"],
+    ["webp", "image/webp"],
+  ]) {
+    const client = new OpenAIImageClient({
+      apiKey: "test-key",
+      requestTimeoutMs: 1000,
+    });
+
+    client.client = {
+      images: {
+        generate: async (request) => {
+          assert.equal(request.output_format, outputFormat);
+          return { data: [{ b64_json: "aW1hZ2U=" }] };
+        },
+      },
+    };
+
+    const result = await client.generateImage({
+      prompt: "a test image",
+      model: "gpt-image-1",
+      outputFormat,
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.mimeType, expectedMimeType);
+  }
 });

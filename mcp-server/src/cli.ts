@@ -23,6 +23,9 @@ Options:
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
   -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
+      --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
+  -b, --background <mode>    auto, transparent or opaque (OpenAI only)
+  -f, --output-format <fmt>  png, jpeg or webp (OpenAI only)
   -d, --output-dir <dir>     Output directory (default: current directory)
   -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
@@ -54,6 +57,9 @@ async function main(): Promise<void> {
         "aspect-ratio": { type: "string", short: "a", default: "1:1" },
         model: { type: "string", short: "m" },
         "reference-images": { type: "string", short: "r", multiple: true },
+        mask: { type: "string" },
+        background: { type: "string", short: "b" },
+        "output-format": { type: "string", short: "f" },
         "output-dir": { type: "string", short: "d", default: process.cwd() },
         "timeout-ms": { type: "string", short: "t" },
         "log-level": { type: "string", short: "l" },
@@ -80,6 +86,9 @@ async function main(): Promise<void> {
       aspectRatio: values["aspect-ratio"],
       model: values.model,
       referenceImages: referenceImages && referenceImages.length > 0 ? referenceImages : undefined,
+      mask: values.mask,
+      background: values.background,
+      outputFormat: values["output-format"],
     });
 
     if (!parsedArgs.success) {

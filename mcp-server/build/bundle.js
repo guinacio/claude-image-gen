@@ -67674,6 +67674,12 @@ var ASPECT_RATIOS = [
   "16:9",
   "9:16"
 ];
+var IMAGE_BACKGROUNDS = ["auto", "transparent", "opaque"];
+var IMAGE_OUTPUT_FORMATS = ["png", "jpeg", "webp"];
+var ALPHA_CAPABLE_OUTPUT_FORMATS = [
+  "png",
+  "webp"
+];
 var FALLBACK_IMAGE_MODELS = [
   "gemini-3-pro-image-preview",
   "gemini-2.5-flash-image"
@@ -67720,6 +67726,18 @@ var GeminiImageClient = class {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const modelName = input.model || this.config.defaultModel;
+      const unsupportedOptions = [
+        input.mask ? "mask" : void 0,
+        input.background ? "background" : void 0,
+        input.outputFormat ? "outputFormat" : void 0
+      ].filter((option) => option !== void 0);
+      if (unsupportedOptions.length > 0) {
+        return {
+          success: false,
+          errorCode: "UNSUPPORTED_BY_PROVIDER",
+          error: `${unsupportedOptions.join(", ")} ${unsupportedOptions.length === 1 ? "is" : "are"} only supported by OpenAI image models; model "${modelName}" routes to Gemini.`
+        };
+      }
       const generationConfig = {
         responseModalities: ["TEXT", "IMAGE"],
         abortSignal: controller.signal,
@@ -78801,6 +78819,41 @@ function mapAspectRatioToOpenAISize(aspectRatio) {
     warning: `Aspect ratio ${aspectRatio} is not supported by OpenAI image models; generated at ${mapping.deliveredRatio} (${mapping.size}) instead.`
   };
 }
+function resolveOutputOptions(background, outputFormat) {
+  if (background !== "transparent") {
+    return { background, outputFormat };
+  }
+  if (outputFormat && !ALPHA_CAPABLE_OUTPUT_FORMATS.includes(outputFormat)) {
+    return {
+      error: `A transparent background requires an output format with an alpha channel (${ALPHA_CAPABLE_OUTPUT_FORMATS.join(" or ")}); "${outputFormat}" cannot carry one.`
+    };
+  }
+  return { background, outputFormat: outputFormat ?? "png" };
+}
+var OBSERVED_MODEL_REJECTIONS = [
+  {
+    models: /^gpt-image-2/,
+    option: 'background: "transparent"',
+    apiMessage: "Transparent background is not supported for this model."
+  }
+];
+function findObservedRejection(model, options) {
+  if (!model || options.background !== "transparent") {
+    return void 0;
+  }
+  return OBSERVED_MODEL_REJECTIONS.find((rejection2) => rejection2.option === 'background: "transparent"' && rejection2.models.test(model));
+}
+function describeOpenAIFailure(error51) {
+  const internalError = error51 instanceof Error ? error51.message : String(error51);
+  const status = error51 instanceof OpenAI.APIError ? error51.status : void 0;
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    return {
+      error: `OpenAI rejected the request: ${internalError}`,
+      internalError
+    };
+  }
+  return { error: "OpenAI image generation failed.", internalError };
+}
 async function fetchOpenAIImageModels(apiKey, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const client = new OpenAI({ apiKey, timeout: timeoutMs, maxRetries: 0 });
   const controller = new AbortController();
@@ -78855,23 +78908,55 @@ var OpenAIImageClient = class {
         timeout: timeoutMs,
         signal: controller.signal
       };
+      const hasReferenceImages = Boolean(input.referenceImages && input.referenceImages.length > 0);
+      if (input.mask && !hasReferenceImages) {
+        return {
+          success: false,
+          errorCode: "MASK_WITHOUT_REFERENCE_IMAGE",
+          error: "A mask can only be used together with referenceImages, since it marks the region of the base image to repaint.",
+          warnings
+        };
+      }
+      const outputOptions = resolveOutputOptions(input.background, input.outputFormat);
+      if (outputOptions.error) {
+        return {
+          success: false,
+          errorCode: "INCOMPATIBLE_OUTPUT_OPTIONS",
+          error: outputOptions.error,
+          warnings
+        };
+      }
+      const rejection2 = findObservedRejection(modelName, {
+        background: outputOptions.background
+      });
+      if (rejection2) {
+        return {
+          success: false,
+          errorCode: "OPTION_UNSUPPORTED_BY_MODEL",
+          error: `${rejection2.option} is not supported by ${modelName}. The API answers: "${rejection2.apiMessage}". Whether other models accept this option has not been verified.`,
+          warnings
+        };
+      }
+      const sharedOptions = {
+        model: modelName,
+        prompt: input.prompt,
+        size,
+        ...outputOptions.background ? { background: outputOptions.background } : {},
+        ...outputOptions.outputFormat ? { output_format: outputOptions.outputFormat } : {}
+      };
       let response;
-      if (input.referenceImages && input.referenceImages.length > 0) {
+      if (hasReferenceImages) {
         const image = await Promise.all(input.referenceImages.map((ref) => toFile2(Buffer.from(ref.base64Data, "base64"), basename3(ref.filePath), {
           type: ref.mimeType
         })));
+        const mask = input.mask ? await toFile2(Buffer.from(input.mask.base64Data, "base64"), basename3(input.mask.filePath), { type: input.mask.mimeType }) : void 0;
         response = await this.client.images.edit({
-          model: modelName,
+          ...sharedOptions,
           image,
-          prompt: input.prompt,
-          size
+          ...mask ? { mask } : {}
         }, requestOptions);
       } else {
-        response = await this.client.images.generate({
-          model: modelName,
-          prompt: input.prompt,
-          size
-        }, requestOptions);
+        response = await this.client.images.generate(sharedOptions, requestOptions);
       }
       const base64Data = response.data?.[0]?.b64_json;
       if (!base64Data) {
@@ -78885,16 +78970,24 @@ var OpenAIImageClient = class {
       return {
         success: true,
         base64Data,
-        mimeType: mimeTypeForOutputFormat(response.output_format),
+        mimeType: mimeTypeForOutputFormat(response.output_format ?? outputOptions.outputFormat),
         warnings
       };
     } catch (error51) {
-      const errorMessage = error51 instanceof Error ? error51.message : String(error51);
+      if (controller.signal.aborted) {
+        return {
+          success: false,
+          errorCode: "REQUEST_TIMEOUT",
+          error: `Image generation timed out after ${timeoutMs}ms.`,
+          internalError: error51 instanceof Error ? error51.message : String(error51)
+        };
+      }
+      const described = describeOpenAIFailure(error51);
       return {
         success: false,
-        errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "OPENAI_API_ERROR",
-        error: controller.signal.aborted ? `Image generation timed out after ${timeoutMs}ms.` : "OpenAI image generation failed.",
-        internalError: errorMessage
+        errorCode: "OPENAI_API_ERROR",
+        error: described.error,
+        internalError: described.internalError
       };
     } finally {
       clearTimeout(timeoutId);
@@ -79431,10 +79524,36 @@ var MediaPipelineService = class {
       }
       referenceImages = loaded.images;
     }
+    let mask;
+    if (request.mask) {
+      const loaded = loadReferenceImages([request.mask], this.logger);
+      if (!loaded.success) {
+        return {
+          success: false,
+          errorCode: loaded.errorCode,
+          error: loaded.error,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings
+        };
+      }
+      mask = loaded.images[0];
+      if (mask.mimeType !== "image/png") {
+        return {
+          success: false,
+          errorCode: "MASK_UNSUPPORTED_TYPE",
+          error: `Mask "${request.mask}" must be a PNG file with an alpha channel.`,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings
+        };
+      }
+    }
     const generated = await client.generateImage({
       prompt: request.prompt,
       referenceImages,
+      mask,
       aspectRatio: request.aspectRatio,
+      background: request.background,
+      outputFormat: request.outputFormat,
       model: selectedModel,
       timeoutMs: this.config.requestTimeoutMs
     });
@@ -79510,8 +79629,11 @@ var createAssetArgsSchema = external_exports.strictObject({
     error: (issue2) => issue2.input === void 0 ? "Required" : void 0
   }).trim().min(1, "Prompt is required").max(1e4, "Prompt must be at most 10000 characters long").describe("Detailed description of the image to generate"),
   referenceImages: external_exports.array(external_exports.string().trim().min(1, "Reference image path cannot be empty").max(1024, "Reference image path must be at most 1024 characters long")).max(5, "Maximum 5 reference images").optional().describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
+  mask: external_exports.string().trim().min(1, "Mask path cannot be empty").max(1024, "Mask path must be at most 1024 characters long").optional().describe("Absolute path to a PNG mask marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
   outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path inside the configured output directory"),
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
+  background: external_exports.enum(IMAGE_BACKGROUNDS).optional().describe("Background handling; transparent requires an alpha-capable format. OpenAI models only"),
+  outputFormat: external_exports.enum(IMAGE_OUTPUT_FORMATS).optional().describe("Encoding of the returned image. OpenAI models only"),
   model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)")
 });
 var createAssetInputSchema = {
@@ -79534,6 +79656,12 @@ var createAssetInputSchema = {
       },
       maxItems: 5
     },
+    mask: {
+      type: "string",
+      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+      minLength: 1,
+      maxLength: 1024
+    },
     outputPath: {
       type: "string",
       description: "Optional custom output file path inside the configured output directory. Both relative and absolute paths must stay within that directory.",
@@ -79544,6 +79672,16 @@ var createAssetInputSchema = {
       type: "string",
       enum: [...ASPECT_RATIOS],
       description: "Aspect ratio for the generated image. Use 16:9 for hero images/headers, 1:1 for thumbnails/social, 9:16 for mobile/stories. Default: 1:1."
+    },
+    background: {
+      type: "string",
+      enum: [...IMAGE_BACKGROUNDS],
+      description: 'Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only \u2014 Gemini models reject it. Verified: gpt-image-2 refuses transparent (400 "Transparent background is not supported for this model"), and that combination is rejected before the request is sent. Whether other models accept transparent, and whether any model accepts auto or opaque, has not been verified.'
+    },
+    outputFormat: {
+      type: "string",
+      enum: [...IMAGE_OUTPUT_FORMATS],
+      description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned."
     },
     model: {
       type: "string",

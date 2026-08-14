@@ -272,10 +272,41 @@ export class MediaPipelineService {
       referenceImages = loaded.images;
     }
 
+    // The mask goes through the same loader as the reference images so that the
+    // existence, size and magic-byte checks apply to it too.
+    let mask: ReferenceImage | undefined;
+    if (request.mask) {
+      const loaded = loadReferenceImages([request.mask], this.logger);
+      if (!loaded.success) {
+        return {
+          success: false,
+          errorCode: loaded.errorCode,
+          error: loaded.error,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings,
+        };
+      }
+
+      mask = loaded.images[0];
+
+      if (mask.mimeType !== "image/png") {
+        return {
+          success: false,
+          errorCode: "MASK_UNSUPPORTED_TYPE",
+          error: `Mask "${request.mask}" must be a PNG file with an alpha channel.`,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings,
+        };
+      }
+    }
+
     const generated = await client.generateImage({
       prompt: request.prompt,
       referenceImages,
+      mask,
       aspectRatio: request.aspectRatio,
+      background: request.background,
+      outputFormat: request.outputFormat,
       model: selectedModel,
       timeoutMs: this.config.requestTimeoutMs,
     });

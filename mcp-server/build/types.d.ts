@@ -1,5 +1,11 @@
 export declare const ASPECT_RATIOS: readonly ["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"];
 export type AspectRatio = (typeof ASPECT_RATIOS)[number];
+export declare const IMAGE_BACKGROUNDS: readonly ["auto", "transparent", "opaque"];
+export type ImageBackground = (typeof IMAGE_BACKGROUNDS)[number];
+export declare const IMAGE_OUTPUT_FORMATS: readonly ["png", "jpeg", "webp"];
+export type ImageOutputFormat = (typeof IMAGE_OUTPUT_FORMATS)[number];
+/** Formats that can carry an alpha channel, and therefore a transparent background. */
+export declare const ALPHA_CAPABLE_OUTPUT_FORMATS: readonly ImageOutputFormat[];
 export declare const FALLBACK_IMAGE_MODELS: readonly ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"];
 export declare const FALLBACK_OPENAI_IMAGE_MODELS: readonly ["gpt-image-2"];
 export type ImageProvider = "gemini" | "openai";
@@ -15,7 +21,11 @@ export interface ReferenceImage {
 export interface GenerateImageInput {
     prompt: string;
     referenceImages?: ReferenceImage[];
+    /** Alpha mask marking the region to repaint. Only meaningful alongside referenceImages. */
+    mask?: ReferenceImage;
     aspectRatio?: AspectRatio;
+    background?: ImageBackground;
+    outputFormat?: ImageOutputFormat;
     model?: GeminiModel;
     timeoutMs?: number;
 }
@@ -56,8 +66,11 @@ export interface RuntimeConfig {
 export interface CreateAssetRequest {
     prompt: string;
     referenceImages?: string[];
+    mask?: string;
     outputPath?: string;
     aspectRatio?: AspectRatio;
+    background?: ImageBackground;
+    outputFormat?: ImageOutputFormat;
     model?: GeminiModel;
 }
 export interface CreateAssetResponse {

@@ -7,6 +7,13 @@ export const ASPECT_RATIOS = [
     "16:9",
     "9:16",
 ];
+export const IMAGE_BACKGROUNDS = ["auto", "transparent", "opaque"];
+export const IMAGE_OUTPUT_FORMATS = ["png", "jpeg", "webp"];
+/** Formats that can carry an alpha channel, and therefore a transparent background. */
+export const ALPHA_CAPABLE_OUTPUT_FORMATS = [
+    "png",
+    "webp",
+];
 export const FALLBACK_IMAGE_MODELS = [
     "gemini-3-pro-image-preview",
     "gemini-2.5-flash-image",

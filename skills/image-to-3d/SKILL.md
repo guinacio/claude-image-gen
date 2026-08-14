@@ -55,14 +55,37 @@ needed in total. It is also **cheaper**, since the `image-to-multiview` step is
 skipped.
 
 The catch is consistency: Tripo asks that all views show the same object under
-consistent lighting. Generate each extra view with the front image as a
-reference, instructing the model to reproduce *the same object* from another
-angle and to keep the same framing and size in frame — not to design it afresh.
-Then verify: measure the occupancy of each view and expect the heights to agree
-within a point or two.
+consistent lighting. Three rules earn their keep here.
 
-For a symmetric object, mirror the left view horizontally and pass it as
-`--right`. Four views for the price of two generations.
+**Anchor each view on a reference that shows what it must inherit.** Generate
+the extra views from one existing image rather than in a chain, so error does
+not accumulate — but the anchor has to actually contain the information the new
+view needs. A sneaker's inner side generated from its *front* view came back
+with a different colour-blocking from its outer side, because the front shows no
+side panel at all and left the model free to invent one. Re-anchored on the
+outer profile, with the instruction to mirror the same panels minus the graphic,
+it matched to within a point.
+
+**Normalise the scale before uploading.** Even with "same framing" in the
+prompt, views drift, because each is framed by whichever axis constrains it: a
+side profile squeezed to fit a long object across the frame comes back with a
+shorter subject than the front view of the same object. Height is the one
+dimension every view of a standing object shares, so `scripts/normalize_views.py`
+rescales them all to a common subject height. On a sneaker that closed a
+15-point spread, and fixed a too-wide front view as a side effect, since both
+errors came from the same scale drift.
+
+**Omit a view rather than fabricate one.** Mirroring the left view into the
+right is free and correct when the object is symmetric about that axis — a pair
+of cargo trousers was. It is wrong when it is not: a sneaker carries its emblem
+on the outer face only, and a shirt's chest pocket turned out to be visible in
+profile, so mirroring would have asserted a pocket on the side that does not
+have one. With two views minimum and the front required, dropping a view is
+allowed. Tripo handles missing information better than contradictory
+information.
+
+Then verify by measuring: heights should agree within a point or two after
+normalisation, and front and back should agree in width.
 
 ## What makes a good input
 
@@ -123,6 +146,13 @@ Other endpoints, not used by the script but available: `POST /v3/models/convert`
 Blender imports GLB directly, so no conversion step is needed. Treat the result
 as a starting block, not a finished asset: expect to retopologise and to fix
 hardware, which is where reconstruction is weakest.
+
+## Scripts
+
+- `scripts/tripo.py` — upload, submit, poll, download
+- `scripts/normalize_views.py` — match the subject scale across a set of views
+
+Both need Pillow; `normalize_views.py` also needs NumPy. See `requirements.txt`.
 
 ## Related
 

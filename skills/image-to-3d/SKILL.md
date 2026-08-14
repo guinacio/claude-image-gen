@@ -27,38 +27,52 @@ Needs `TRIPO_API_KEY` in the environment. Standard library only, no install.
 | Flag | Effect |
 |---|---|
 | `--yes` | actually submit and spend |
-| `--direct` | single-image path, skips multiview: 10 credits cheaper, less accurate geometry |
-| `--no-texture` | geometry only, 10 credits cheaper |
+| `--left`, `--back`, `--right` | supply your own views instead of letting Tripo invent them |
+| `--direct` | single-image path, skips multiview: cheaper, least accurate geometry |
+| `--texture` | also generate texture maps, 10 more credits (default: geometry only) |
 | `--face-limit N` | cap the polygon count |
+| `--geometry-quality detailed` | Tripo's Ultra mode, extra credits |
 | `--name`, `--output-dir` | naming and destination |
 
-## You supply one image, not four
+## Supply your own views when the sides matter
 
-Tripo's multiview pipeline generates the four views itself:
+There are two ways in and the difference is visible in the mesh.
+
+With only a front image, `image-to-multiview` invents the other three views and
+`multiview-to-model` reconstructs from them. Cheap, needs nothing, and the sides
+come out wrong in a specific way: detail from the front gets wrapped around onto
+faces the model never saw. On a pair of cargo trousers that meant pockets and
+buckles appearing on the outer leg where none exist.
+
+`multiview-to-model` also accepts images directly, which fixes exactly that:
 
 ```
-POST /v3/generation/image-to-multiview   { file_token }
-POST /v3/generation/multiview-to-model   { input: <multiview task_id> }
+inputs: [ {front: <token>}, {left: <token>}, {back: <token>}, {right: <token>} ]
 ```
 
-Do **not** generate front/side/back views separately in an image model and feed
-them in. Independently generated views disagree with each other — sole thickness
-changes, details move — and a reconstructor asked to reconcile geometry that
-does not close produces worse results than one clean view. Tripo's four views
-come from an object it already reconstructed, so they agree by construction.
+The front view is required, the rest are optional, and at least two images are
+needed in total. It is also **cheaper**, since the `image-to-multiview` step is
+skipped.
+
+The catch is consistency: Tripo asks that all views show the same object under
+consistent lighting. Generate each extra view with the front image as a
+reference, instructing the model to reproduce *the same object* from another
+angle and to keep the same framing and size in frame — not to design it afresh.
+Then verify: measure the occupancy of each view and expect the heights to agree
+within a point or two.
+
+For a symmetric object, mirror the left view horizontally and pass it as
+`--right`. Four views for the price of two generations.
 
 ## What makes a good input
 
 From Tripo's own guidance: **a front view on a clean background. Side views
-reduce quality.**
+reduce quality** — meaning as the *front* input, not as supplementary views.
 
-That inverts the usual instinct of showing an object at three-quarters to convey
-depth. When preparing the source image, frame the object front-on.
-
-Also: one object per image, no character wearing it, no floor, no cast shadow.
-Match the background value to the object — a white garment on a white background
-leaves a soft silhouette edge and the reconstruction eats it. Use mid-grey for
-pale objects.
+One object per image, no character wearing it, no floor, no cast shadow. Match
+the background value to the object: a white garment on a white background leaves
+a soft silhouette edge and the reconstruction eats it. Use mid-grey for pale
+objects.
 
 ## Costs
 
@@ -67,15 +81,19 @@ pale objects.
 | Step | Credits |
 |---|---|
 | image-to-multiview | 10 |
-| multiview-to-model, textured | 30 |
-| multiview-to-model, geometry only | 20 |
-| image-to-model (`--direct`), textured | 30 |
+| multiview-to-model / image-to-model, geometry only | 20 |
+| the same, textured | 30 |
 
-So the default pipeline is **40 credits, about $0.40** per piece; `--direct` is
-30, and `--no-texture` takes 10 off either.
+So supplying your own views costs **20 credits**, letting Tripo invent them
+costs 30, and `--texture` adds 10 to either.
+
+Geometry only is the default because reconstruction textures are baked from the
+input views and tend to be replaced in the DCC anyway. The mesh is identical
+either way — a model that arrived textured can simply have its material removed.
 
 Add-ons exist and stack on the base (HD texture +10, HD geometry +20, quad mesh
-+5, smart low-poly +10); the script does not request any of them.
++5, smart low-poly +10); the script requests none of them except
+`--geometry-quality detailed`.
 
 ## API shape
 

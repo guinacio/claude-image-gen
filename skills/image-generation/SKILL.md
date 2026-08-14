@@ -48,6 +48,9 @@ node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
 | --aspect-ratio, -a | No | 1:1 | 1:1, 16:9, 9:16, 4:3, 3:4, 2:3, 3:2 |
 | --model, -m | No | provider default | Model to use; routes the provider (gpt-image*/dall-e* → OpenAI, others → Gemini) |
 | --reference-images, -r | No | - | Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5) |
+| --mask | No | - | PNG mask marking the region to repaint; OpenAI only, requires --reference-images |
+| --background, -b | No | provider default | auto, transparent or opaque; OpenAI only. `gpt-image-2` refuses `transparent` and is rejected before the request is sent |
+| --output-format, -f | No | provider default | png, jpeg or webp; OpenAI only |
 | --output-dir, -d | No | current directory | Output directory |
 
 ### Environment Variables
@@ -181,5 +184,5 @@ If the MCP server is configured, you can also use:
 mcp__media-pipeline__create_asset
 ```
 
-Parameters: `prompt`, `outputPath`, `aspectRatio`, `model` (routes to Gemini or OpenAI by name), `referenceImages` (up to 5 absolute paths, PNG/JPEG/WebP)
+Parameters: `prompt`, `outputPath`, `aspectRatio`, `model` (routes to Gemini or OpenAI by name), `referenceImages` (up to 5 absolute paths, PNG/JPEG/WebP), `mask`, `background`, `outputFormat` (the last three are OpenAI-only)
 

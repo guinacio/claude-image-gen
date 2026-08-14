@@ -64,6 +64,23 @@ export class GeminiImageClient {
     try {
       const modelName = input.model || this.config.defaultModel;
 
+      // mask, background and outputFormat are OpenAI image-API options with no
+      // Gemini equivalent. Refuse them explicitly: silently dropping them would
+      // return an image that quietly ignores what the caller asked for.
+      const unsupportedOptions = [
+        input.mask ? "mask" : undefined,
+        input.background ? "background" : undefined,
+        input.outputFormat ? "outputFormat" : undefined,
+      ].filter((option): option is string => option !== undefined);
+
+      if (unsupportedOptions.length > 0) {
+        return {
+          success: false,
+          errorCode: "UNSUPPORTED_BY_PROVIDER",
+          error: `${unsupportedOptions.join(", ")} ${unsupportedOptions.length === 1 ? "is" : "are"} only supported by OpenAI image models; model "${modelName}" routes to Gemini.`,
+        };
+      }
+
       // Build generation config
       const generationConfig: Record<string, unknown> = {
         responseModalities: ["TEXT", "IMAGE"],

@@ -18,7 +18,13 @@ Criteria (see SKILL.md and resolutions-and-proportions.md):
 import os
 import sys
 
-from PIL import Image, ImageOps
+try:
+    from PIL import Image, ImageOps
+except ImportError as error:
+    raise SystemExit(
+        "Pillow is required. Install it with: "
+        "python -m pip install -r skills/character-reference-sheets/requirements.txt"
+    ) from error
 
 
 def measure(path):

@@ -114,10 +114,13 @@ A 1.80 m character filling the frame with correct margin:
 | 1024×1024, body at 96% of height | ~980 px | 5.4 | 5 px |
 | 1024×1536, body at 76% of height | ~1170 px | 6.5 | 6-7 px |
 
-That is ~22% of gain, not a game changer. **What actually resolves hardware
-detail is `input_fidelity: high`**, not resolution — and note that `gpt-image-2`
-rejects that parameter, so it is only available on `gpt-image-1`. Use `2:3` for
-the margin and for the subject's proportion, not expecting a sharpness miracle.
+That is ~22% of gain, not a game changer. Input fidelity matters more to fine
+detail than this modest resolution increase. [OpenAI documents GPT Image
+2](https://developers.openai.com/api/docs/models/gpt-image-2) as supporting
+high-fidelity image inputs, but the current `create_asset` client does not
+expose `input_fidelity`, so it uses the provider default. Do not claim that
+`high` is enabled. Use `2:3` for the margin and for the subject's proportion,
+not expecting a sharpness miracle.
 
 ## 5. Exporting from Blender
 

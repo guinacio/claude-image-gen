@@ -32,8 +32,20 @@ result too — do not silently fix and re-run.
 4. **Ask for permission to generate.**
 5. **Generate**, one view per call.
 6. **Measure the output** and compare against the input (thresholds below).
-7. **Copy** from `IMAGE_OUTPUT_DIR` into the character project's `geracoes/`
+7. **Copy** from `IMAGE_OUTPUT_DIR` into the character project's own output
    folder, with a descriptive versioned name: `character_outfit_front_v2.png`.
+
+## Measurement dependency
+
+`scripts/measure.py` requires Python and Pillow. Before first use, ask before
+installing the dependency, then run:
+
+```bash
+python -m pip install -r skills/character-reference-sheets/requirements.txt
+```
+
+If Pillow is unavailable and cannot be installed, do not generate: report that
+the mandatory pre-flight measurement could not be completed.
 
 ## The rule that matters most
 
@@ -55,8 +67,8 @@ The prompt says **what to add** and **what to preserve**. Never what the body is
 |---|---|
 | Model | `gpt-image-2` |
 | Aspect ratio | `2:3` for a standing character · `1:1` for an isolated garment or prop |
-| Quality | `quality: "high"`, pinned in the client |
-| `input_fidelity` | **never send it to `gpt-image-2`** — it answers 400. Only `gpt-image-1` accepts it |
+| Quality | Provider default — the current `create_asset` client does not expose `quality` |
+| `input_fidelity` | Provider default — the current client does not expose this option. [OpenAI documents GPT Image 2](https://developers.openai.com/api/docs/models/gpt-image-2) as supporting high-fidelity image inputs, but this workflow does not explicitly request `high` |
 | References | 2 to 4, base image **first** |
 | Turnarounds | never in a single image — one view per call |
 

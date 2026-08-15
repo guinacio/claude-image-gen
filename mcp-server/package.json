@@ -17,7 +17,10 @@
     "start:cli": "node build/cli.bundle.js --help",
     "test": "npm run build && node --test tests/*.mjs",
     "smoke:test": "node scripts/smoke-test.mjs",
-    "pack:mcpb": "npm run bundle && npm run smoke:test && mcpb pack . media-pipeline.mcpb",
+    "sync:version": "node scripts/sync-version.mjs",
+    "check:version": "node scripts/sync-version.mjs --check",
+    "version": "node scripts/sync-version.mjs && git add manifest.json package-lock.json ../.claude-plugin/plugin.json ../.claude-plugin/marketplace.json",
+    "pack:mcpb": "npm run check:version && npm run bundle && npm run smoke:test && mcpb pack . media-pipeline.mcpb",
     "dev": "tsc --watch"
   },
   "dependencies": {

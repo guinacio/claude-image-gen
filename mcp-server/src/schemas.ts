@@ -90,7 +90,7 @@ export const createAssetInputSchema = {
     mask: {
       type: "string",
       description:
-        "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions — the PNG signature and the presence of an alpha channel are checked locally, the dimension match is not and is left to the API. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+        "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and OpenAI documents the mask as needing an alpha channel and matching dimensions. Checked locally: the file really is a PNG, and it is not fully opaque (an opaque mask marks nothing and is rejected before the request is sent). Not checked locally and left to the API: the dimension match, and whether a PNG carrying transparency in a tRNS chunk instead of an alpha channel is accepted — that case is sent with a warning. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
       minLength: 1,
       maxLength: 1024,
     },

@@ -1,7 +1,7 @@
 import { GeminiImageClient, fetchImageModels } from "./gemini-client.js";
 import { OpenAIImageClient, fetchOpenAIImageModels } from "./openai-client.js";
 import { ImageStorage } from "./image-storage.js";
-import { loadReferenceImages, pngHasAlphaChannel } from "./reference-images.js";
+import { detectPngTransparency, loadReferenceImages } from "./reference-images.js";
 import { pathToFileURL } from "node:url";
 import { getApiKeyEnvVarForProvider, getDefaultModelForProvider, resolveProviderForModel, } from "./provider.js";
 import { formatErrorMessage, getFallbackImageModels, resolveDefaultModel, } from "./runtime.js";
@@ -212,23 +212,29 @@ export class MediaPipelineService {
                     warnings,
                 };
             }
-            // OpenAI repaints the fully transparent areas of the mask, so an RGB-only
+            // OpenAI repaints the fully transparent areas of the mask, so an opaque
             // PNG has nothing for it to act on. Catching that here avoids a paid round
             // trip that either fails or silently leaves the base image untouched.
-            const hasAlpha = pngHasAlphaChannel(Buffer.from(mask.base64Data, "base64"));
-            if (hasAlpha === false) {
-                this.logger.warn("Rejected mask without an alpha channel", {
+            const transparency = detectPngTransparency(Buffer.from(mask.base64Data, "base64"));
+            if (transparency === "none") {
+                this.logger.warn("Rejected fully opaque mask", {
                     filePath: mask.filePath,
                 });
                 return {
                     success: false,
                     errorCode: "MASK_WITHOUT_ALPHA_CHANNEL",
-                    error: `Mask "${request.mask}" has no alpha channel. The transparent areas of the mask are the areas the model repaints, so an opaque PNG marks nothing — re-export it as RGBA with the region to repaint erased.`,
+                    error: `Mask "${request.mask}" is fully opaque. The transparent areas of the mask are the areas the model repaints, so an opaque PNG marks nothing — re-export it as RGBA with the region to repaint erased.`,
                     outputDirectory: this.imageStorage.getOutputDirectory(),
                     warnings,
                 };
             }
-            if (hasAlpha === null) {
+            // A tRNS chunk is valid PNG transparency, but OpenAI documents the mask as
+            // needing an alpha channel. Not verified as rejected, so the request still
+            // goes out and the API gets to give its own answer.
+            if (transparency === "transparency-chunk") {
+                warnings.push(`Mask "${request.mask}" carries transparency in a tRNS chunk rather than an alpha channel. OpenAI documents masks as needing an alpha channel, so the API may reject it or ignore the marked region; re-exporting the mask as RGBA avoids the ambiguity.`);
+            }
+            if (transparency === null) {
                 this.logger.warn("Could not read the PNG header of the mask", {
                     filePath: mask.filePath,
                 });

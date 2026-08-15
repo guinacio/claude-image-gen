@@ -18,7 +18,7 @@ function createPngChunk(type, data) {
 }
 
 // Colour type 6 is truecolour + alpha, 2 is truecolour without one.
-function createPngBytes(colorType) {
+function createPngBytes(colorType, { transparencyChunk = false } = {}) {
   const ihdrData = Buffer.alloc(13);
   ihdrData.writeUInt32BE(1, 0); // width
   ihdrData.writeUInt32BE(1, 4); // height
@@ -28,6 +28,7 @@ function createPngBytes(colorType) {
   return Buffer.concat([
     PNG_SIGNATURE,
     createPngChunk("IHDR", ihdrData),
+    ...(transparencyChunk ? [createPngChunk("tRNS", Buffer.from([0x00]))] : []),
     createPngChunk("IDAT", Buffer.from("fake-pixels")),
     createPngChunk("IEND", Buffer.alloc(0)),
   ]);
@@ -339,7 +340,37 @@ test("createAsset rejects a mask that is not a PNG", async () => {
   }
 });
 
-test("createAsset rejects a well-formed PNG mask without an alpha channel", async () => {
+test("createAsset warns but still sends a mask whose transparency comes from tRNS", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const basePath = writeFile(outputDirectory, "base.png", createPngBytes(6));
+    const maskPath = writeFile(
+      outputDirectory,
+      "mask.png",
+      createPngBytes(3, { transparencyChunk: true })
+    );
+
+    const response = await createMaskService(outputDirectory, openaiClient).createAsset({
+      prompt: "repaint the sky",
+      model: "gpt-image-2",
+      referenceImages: [basePath],
+      mask: maskPath,
+    });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(openaiClient.calls.length, 1, "the API still gets to decide");
+    assert.ok(
+      response.warnings.some((warning) => warning.includes("tRNS")),
+      "expected a warning naming the tRNS chunk"
+    );
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset rejects a fully opaque PNG mask", async () => {
   const outputDirectory = createTempDirectory();
   const openaiClient = createFakeClient();
 
@@ -356,7 +387,7 @@ test("createAsset rejects a well-formed PNG mask without an alpha channel", asyn
 
     assert.equal(response.success, false);
     assert.equal(response.errorCode, "MASK_WITHOUT_ALPHA_CHANNEL");
-    assert.match(response.error, /no alpha channel/);
+    assert.match(response.error, /fully opaque/);
     assert.equal(openaiClient.calls.length, 0, "no paid round trip is attempted");
   } finally {
     removeDirectory(outputDirectory);

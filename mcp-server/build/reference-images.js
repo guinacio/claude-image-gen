@@ -49,7 +49,8 @@ export function sniffImageMimeType(data) {
 /**
  * Walks the chunk list looking for a tRNS chunk, which is how greyscale,
  * truecolour and indexed PNGs carry transparency instead of an alpha sample.
- * tRNS must appear before the first IDAT, so the walk stops there.
+ * The spec places tRNS after PLTE and before the first IDAT, so the walk stops
+ * at IDAT rather than reading the whole file.
  */
 function pngHasTransparencyChunk(data) {
     let offset = PNG_SIGNATURE.length;
@@ -67,12 +68,16 @@ function pngHasTransparencyChunk(data) {
     return false;
 }
 /**
- * Reports whether a PNG can carry per-pixel transparency, by reading the IHDR
- * colour type and, for the colour types without an alpha sample, checking for a
- * tRNS chunk. Returns null when the buffer is not a PNG whose IHDR can be read,
- * so callers can tell "no alpha" apart from "could not tell".
+ * Reports how a PNG carries transparency, by reading the IHDR colour type and,
+ * for the colour types without an alpha sample, checking for a tRNS chunk.
+ * Returns null when the buffer is not a PNG whose IHDR can be read, so callers
+ * can tell "opaque" apart from "could not tell".
+ *
+ * The two transparent results are kept apart because OpenAI documents a mask as
+ * needing an alpha channel specifically, so a tRNS-only PNG is transparent by
+ * the PNG spec yet outside what the API says it accepts.
  */
-export function pngHasAlphaChannel(data) {
+export function detectPngTransparency(data) {
     if (data.length <= PNG_IHDR_COLOR_TYPE_OFFSET ||
         !data.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) ||
         !data
@@ -82,9 +87,9 @@ export function pngHasAlphaChannel(data) {
     }
     const colorType = data.readUInt8(PNG_IHDR_COLOR_TYPE_OFFSET);
     if ((colorType & PNG_COLOR_TYPE_ALPHA_BIT) !== 0) {
-        return true;
+        return "alpha-channel";
     }
-    return pngHasTransparencyChunk(data);
+    return pngHasTransparencyChunk(data) ? "transparency-chunk" : "none";
 }
 export function loadReferenceImages(filePaths, logger) {
     const images = [];

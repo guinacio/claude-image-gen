@@ -67,9 +67,19 @@ export function sniffImageMimeType(data: Buffer): string | null {
 }
 
 /**
+ * How a PNG carries transparency, if at all:
+ * - "alpha-channel": an alpha sample per pixel (colour types 4 and 6)
+ * - "transparency-chunk": a tRNS chunk, the only mechanism available to colour
+ *   types 0, 2 and 3, which the PNG spec forbids for types 4 and 6
+ * - "none": fully opaque, nothing for a mask to mark
+ */
+export type PngTransparency = "alpha-channel" | "transparency-chunk" | "none";
+
+/**
  * Walks the chunk list looking for a tRNS chunk, which is how greyscale,
  * truecolour and indexed PNGs carry transparency instead of an alpha sample.
- * tRNS must appear before the first IDAT, so the walk stops there.
+ * The spec places tRNS after PLTE and before the first IDAT, so the walk stops
+ * at IDAT rather than reading the whole file.
  */
 function pngHasTransparencyChunk(data: Buffer): boolean {
   let offset = PNG_SIGNATURE.length;
@@ -93,12 +103,16 @@ function pngHasTransparencyChunk(data: Buffer): boolean {
 }
 
 /**
- * Reports whether a PNG can carry per-pixel transparency, by reading the IHDR
- * colour type and, for the colour types without an alpha sample, checking for a
- * tRNS chunk. Returns null when the buffer is not a PNG whose IHDR can be read,
- * so callers can tell "no alpha" apart from "could not tell".
+ * Reports how a PNG carries transparency, by reading the IHDR colour type and,
+ * for the colour types without an alpha sample, checking for a tRNS chunk.
+ * Returns null when the buffer is not a PNG whose IHDR can be read, so callers
+ * can tell "opaque" apart from "could not tell".
+ *
+ * The two transparent results are kept apart because OpenAI documents a mask as
+ * needing an alpha channel specifically, so a tRNS-only PNG is transparent by
+ * the PNG spec yet outside what the API says it accepts.
  */
-export function pngHasAlphaChannel(data: Buffer): boolean | null {
+export function detectPngTransparency(data: Buffer): PngTransparency | null {
   if (
     data.length <= PNG_IHDR_COLOR_TYPE_OFFSET ||
     !data.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) ||
@@ -112,10 +126,10 @@ export function pngHasAlphaChannel(data: Buffer): boolean | null {
   const colorType = data.readUInt8(PNG_IHDR_COLOR_TYPE_OFFSET);
 
   if ((colorType & PNG_COLOR_TYPE_ALPHA_BIT) !== 0) {
-    return true;
+    return "alpha-channel";
   }
 
-  return pngHasTransparencyChunk(data);
+  return pngHasTransparencyChunk(data) ? "transparency-chunk" : "none";
 }
 
 export function loadReferenceImages(

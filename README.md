@@ -158,6 +158,18 @@ npm run pack:mcpb
 
 This creates `mcp-server/media-pipeline.mcpb` using bundled runtime entry points for both the MCP server and the standalone CLI.
 
+#### Versioning
+
+`mcp-server/package.json` is the single source of truth for the version. `mcp-server/manifest.json`, `mcp-server/package-lock.json`, `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are all derived from it — never edit their version fields by hand.
+
+To bump:
+
+```bash
+cd mcp-server && npm version minor --no-git-tag-version
+```
+
+`npm version` updates `package.json` and the lockfile, then the `version` lifecycle script propagates it to the remaining manifests and stages them. `npm run sync:version` does the same propagation on its own, and `npm run check:version` reports drift without writing. Both `npm test` and `npm run pack:mcpb` fail on drift, so a release cannot ship with mismatched manifests.
+
 ## Usage
 
 ### Direct Tool Usage
@@ -196,7 +208,7 @@ The server is dual-provider: it routes each request to Google Gemini or OpenAI (
 - **Aspect ratios on OpenAI**: OpenAI image models only support `1024x1024`, `1536x1024`, and `1024x1536`. Requested aspect ratios are mapped to the nearest supported size, and if the mapping isn't exact the response includes a warning describing the substitution.
 - **Reference images**: supported on both providers — pass up to 5 reference image paths to guide generation.
 - **`mask`, `background`, `outputFormat`**: OpenAI models only — Gemini models reject them.
-  - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages` and must match their dimensions. The PNG signature and the presence of an alpha channel are checked locally; the dimension match is left to the API.
+  - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages`, and [OpenAI documents](https://developers.openai.com/api/docs/guides/image-generation) the mask as needing an alpha channel and the same dimensions as the base image. Checked locally: the file really is a PNG, and it is not fully opaque — an opaque mask marks nothing, so it is rejected before the request is sent. Left to the API: the dimension match, and whether a PNG carrying transparency in a `tRNS` chunk instead of an alpha channel is accepted — that case is sent with a warning rather than blocked.
   - `background` (`auto`, `transparent`, `opaque`) chooses how the background is handled. `transparent` needs an alpha-capable `outputFormat`, so `png` is selected automatically when `outputFormat` is omitted. `gpt-image-2` rejects `transparent`, and that combination is refused before the request is sent.
   - `outputFormat` (`png`, `jpeg`, `webp`) sets the encoding of the returned image; `jpeg` cannot carry transparency.
 

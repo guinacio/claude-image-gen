@@ -4,8 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  detectPngTransparency,
   loadReferenceImages,
-  pngHasAlphaChannel,
   sniffImageMimeType,
   MAX_REFERENCE_IMAGE_BYTES,
 } from "../build/reference-images.js";
@@ -195,33 +195,44 @@ test("sniffImageMimeType detects each supported format and rejects others", () =
   assert.equal(sniffImageMimeType(Buffer.alloc(0)), null);
 });
 
-test("pngHasAlphaChannel accepts the colour types that carry an alpha sample", () => {
-  assert.equal(pngHasAlphaChannel(createPng(4)), true, "greyscale + alpha");
-  assert.equal(pngHasAlphaChannel(createPng(6)), true, "truecolour + alpha");
+test("detectPngTransparency reports an alpha sample for colour types 4 and 6", () => {
+  assert.equal(detectPngTransparency(createPng(4)), "alpha-channel", "greyscale + alpha");
+  assert.equal(detectPngTransparency(createPng(6)), "alpha-channel", "truecolour + alpha");
 });
 
-test("pngHasAlphaChannel rejects colour types without transparency", () => {
-  assert.equal(pngHasAlphaChannel(createPng(0)), false, "greyscale");
-  assert.equal(pngHasAlphaChannel(createPng(2)), false, "truecolour");
-  assert.equal(pngHasAlphaChannel(createPng(3)), false, "indexed");
+test("detectPngTransparency reports opaque colour types without a tRNS chunk", () => {
+  assert.equal(detectPngTransparency(createPng(0)), "none", "greyscale");
+  assert.equal(detectPngTransparency(createPng(2)), "none", "truecolour");
+  assert.equal(detectPngTransparency(createPng(3)), "none", "indexed");
 });
 
-test("pngHasAlphaChannel accepts alpha-less colour types carrying a tRNS chunk", () => {
+test("detectPngTransparency distinguishes tRNS transparency from an alpha channel", () => {
+  // The PNG spec allows tRNS only for colour types 0, 2 and 3; it is forbidden
+  // for the two types that already carry an alpha sample.
   for (const colorType of [0, 2, 3]) {
     assert.equal(
-      pngHasAlphaChannel(createPng(colorType, { transparencyChunk: true })),
-      true,
+      detectPngTransparency(createPng(colorType, { transparencyChunk: true })),
+      "transparency-chunk",
       `colour type ${colorType} with tRNS`
     );
   }
 });
 
-test("pngHasAlphaChannel returns null when the PNG header cannot be read", () => {
-  assert.equal(pngHasAlphaChannel(PNG_BYTES), null, "no IHDR chunk");
-  assert.equal(pngHasAlphaChannel(JPEG_BYTES), null, "not a PNG");
-  assert.equal(pngHasAlphaChannel(Buffer.alloc(0)), null, "empty buffer");
+test("detectPngTransparency ignores a tRNS chunk placed after the pixel data", () => {
+  const png = Buffer.concat([
+    createPng(2),
+    createPngChunk("tRNS", Buffer.from([0x00])),
+  ]);
+
+  assert.equal(detectPngTransparency(png), "none");
+});
+
+test("detectPngTransparency returns null when the PNG header cannot be read", () => {
+  assert.equal(detectPngTransparency(PNG_BYTES), null, "no IHDR chunk");
+  assert.equal(detectPngTransparency(JPEG_BYTES), null, "not a PNG");
+  assert.equal(detectPngTransparency(Buffer.alloc(0)), null, "empty buffer");
   assert.equal(
-    pngHasAlphaChannel(createPng(6).subarray(0, 20)),
+    detectPngTransparency(createPng(6).subarray(0, 20)),
     null,
     "truncated before the colour type"
   );

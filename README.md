@@ -160,6 +160,8 @@ npm run pack:mcpb
 
 This creates `mcp-server/media-pipeline.mcpb` using bundled runtime entry points for both the MCP server and the standalone CLI.
 
+The packed extension is committed to the repo and served from the Releases page, so it must not fall behind source. `pack:mcpb` records a hash of every packed file in `mcp-server/mcpb-contents.json`, and `npm test` recomputes them — change the source without repacking and the suite fails. The archive itself is not byte-reproducible (zip stores timestamps), which is why the inputs are hashed rather than the `.mcpb`.
+
 #### Versioning
 
 `mcp-server/package.json` is the single source of truth for the version. `mcp-server/manifest.json`, `mcp-server/package-lock.json`, `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are all derived from it — never edit their version fields by hand.

@@ -20,7 +20,7 @@
     "sync:version": "node scripts/sync-version.mjs",
     "check:version": "node scripts/sync-version.mjs --check",
     "version": "node scripts/sync-version.mjs && git add manifest.json package-lock.json ../.claude-plugin/plugin.json ../.claude-plugin/marketplace.json",
-    "pack:mcpb": "npm run check:version && npm run bundle && npm run smoke:test && mcpb pack . media-pipeline.mcpb",
+    "pack:mcpb": "npm run check:version && npm run bundle && npm run smoke:test && mcpb pack . media-pipeline.mcpb && node scripts/pack-contents.mjs",
     "dev": "tsc --watch"
   },
   "dependencies": {

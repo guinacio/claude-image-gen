@@ -12,6 +12,7 @@ AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integra
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
 - Multiple model support (quality vs speed) across both providers
 - Optional reference images to guide generation (up to 5, PNG/JPEG/WebP) on both providers
+- Inpainting with a PNG mask, plus `background` and `outputFormat` control, on OpenAI models
 - Images saved to disk within the configured output directory, with file paths returned
 - MCP server speaks the MCP 2026-07-28 spec, with backward compatibility for older MCP clients
 
@@ -194,6 +195,12 @@ The server is dual-provider: it routes each request to Google Gemini or OpenAI (
 
 - **Aspect ratios on OpenAI**: OpenAI image models only support `1024x1024`, `1536x1024`, and `1024x1536`. Requested aspect ratios are mapped to the nearest supported size, and if the mapping isn't exact the response includes a warning describing the substitution.
 - **Reference images**: supported on both providers — pass up to 5 reference image paths to guide generation.
+- **`mask`, `background`, `outputFormat`**: OpenAI models only — Gemini models reject them.
+  - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages` and must match their dimensions. The PNG signature and the presence of an alpha channel are checked locally; the dimension match is left to the API.
+  - `background` (`auto`, `transparent`, `opaque`) chooses how the background is handled. `transparent` needs an alpha-capable `outputFormat`, so `png` is selected automatically when `outputFormat` is omitted. `gpt-image-2` rejects `transparent`, and that combination is refused before the request is sent.
+  - `outputFormat` (`png`, `jpeg`, `webp`) sets the encoding of the returned image; `jpeg` cannot carry transparency.
+
+  Apart from the `gpt-image-2`/`transparent` case above, these three options have not been verified against a live API — when a model refuses one, the API's own reason is returned.
 
 ### Models
 

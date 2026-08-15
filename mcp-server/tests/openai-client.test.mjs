@@ -201,3 +201,28 @@ test("generateImage uses the requested format when the response omits output_for
     assert.equal(result.mimeType, expectedMimeType);
   }
 });
+
+test("generateImage rejects a mask that has no base image to repaint", async () => {
+  const client = new OpenAIImageClient({
+    apiKey: "test-key",
+    requestTimeoutMs: 1000,
+  });
+
+  client.client = {
+    images: {
+      generate: async () => {
+        throw new Error("the request must not reach the API");
+      },
+    },
+  };
+
+  const result = await client.generateImage({
+    prompt: "repaint the sky",
+    model: "gpt-image-2",
+    mask: { filePath: "mask.png", base64Data: "bWFzaw==", mimeType: "image/png" },
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.errorCode, "MASK_WITHOUT_REFERENCE_IMAGE");
+  assert.match(result.error, /referenceImages/);
+});

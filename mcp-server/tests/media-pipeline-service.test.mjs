@@ -8,8 +8,39 @@ import { createRuntimeConfig } from "../build/runtime.js";
 
 const PNG_BASE64 = Buffer.from("fake-png-bytes").toString("base64");
 
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+function createPngChunk(type, data) {
+  const header = Buffer.alloc(4);
+  header.writeUInt32BE(data.length, 0);
+  // The mask check does not verify CRCs, so a zeroed placeholder is enough.
+  return Buffer.concat([header, Buffer.from(type, "ascii"), data, Buffer.alloc(4)]);
+}
+
+// Colour type 6 is truecolour + alpha, 2 is truecolour without one.
+function createPngBytes(colorType) {
+  const ihdrData = Buffer.alloc(13);
+  ihdrData.writeUInt32BE(1, 0); // width
+  ihdrData.writeUInt32BE(1, 4); // height
+  ihdrData.writeUInt8(8, 8); // bit depth
+  ihdrData.writeUInt8(colorType, 9);
+
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    createPngChunk("IHDR", ihdrData),
+    createPngChunk("IDAT", Buffer.from("fake-pixels")),
+    createPngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
 function createTempDirectory() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "media-pipeline-service-test-"));
+}
+
+function writeFile(directory, name, contents) {
+  const filePath = path.join(directory, name);
+  fs.writeFileSync(filePath, contents);
+  return filePath;
 }
 
 function removeDirectory(directoryPath) {
@@ -237,6 +268,118 @@ test("createAsset still rejects unknown models across both providers", async () 
     assert.equal(response.success, false);
     assert.equal(response.errorCode, "INVALID_MODEL");
     assert.match(response.error, /gemini-3-pro-image-preview, gpt-image-2/);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+function createMaskService(outputDirectory, openaiClient) {
+  return createService(
+    outputDirectory,
+    { OPENAI_API_KEY: "openai-key" },
+    {
+      clients: { openai: openaiClient },
+      fetchOpenAIModels: async () => ["gpt-image-2"],
+      fetchGeminiModels: async () => {
+        throw new Error("Gemini discovery must not run without a key");
+      },
+    }
+  );
+}
+
+test("createAsset forwards a mask with an alpha channel to the client", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const basePath = writeFile(outputDirectory, "base.png", createPngBytes(6));
+    const maskPath = writeFile(outputDirectory, "mask.png", createPngBytes(6));
+
+    const response = await createMaskService(outputDirectory, openaiClient).createAsset({
+      prompt: "repaint the sky",
+      model: "gpt-image-2",
+      referenceImages: [basePath],
+      mask: maskPath,
+    });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(openaiClient.calls.length, 1);
+    assert.equal(openaiClient.calls[0].mask.filePath, path.resolve(maskPath));
+    assert.equal(openaiClient.calls[0].mask.mimeType, "image/png");
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset rejects a mask that is not a PNG", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const basePath = writeFile(outputDirectory, "base.png", createPngBytes(6));
+    // JPEG content behind a .png name: the extension passes, the sniffed type does not.
+    const maskPath = writeFile(
+      outputDirectory,
+      "mask.png",
+      Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from("body")])
+    );
+
+    const response = await createMaskService(outputDirectory, openaiClient).createAsset({
+      prompt: "repaint the sky",
+      model: "gpt-image-2",
+      referenceImages: [basePath],
+      mask: maskPath,
+    });
+
+    assert.equal(response.success, false);
+    assert.equal(response.errorCode, "MASK_UNSUPPORTED_TYPE");
+    assert.equal(openaiClient.calls.length, 0);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset rejects a well-formed PNG mask without an alpha channel", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const basePath = writeFile(outputDirectory, "base.png", createPngBytes(6));
+    const maskPath = writeFile(outputDirectory, "mask.png", createPngBytes(2));
+
+    const response = await createMaskService(outputDirectory, openaiClient).createAsset({
+      prompt: "repaint the sky",
+      model: "gpt-image-2",
+      referenceImages: [basePath],
+      mask: maskPath,
+    });
+
+    assert.equal(response.success, false);
+    assert.equal(response.errorCode, "MASK_WITHOUT_ALPHA_CHANNEL");
+    assert.match(response.error, /no alpha channel/);
+    assert.equal(openaiClient.calls.length, 0, "no paid round trip is attempted");
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset reports a missing mask file through the reference image loader", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const basePath = writeFile(outputDirectory, "base.png", createPngBytes(6));
+
+    const response = await createMaskService(outputDirectory, openaiClient).createAsset({
+      prompt: "repaint the sky",
+      model: "gpt-image-2",
+      referenceImages: [basePath],
+      mask: path.join(outputDirectory, "absent.png"),
+    });
+
+    assert.equal(response.success, false);
+    assert.equal(response.errorCode, "REFERENCE_IMAGE_NOT_FOUND");
+    assert.equal(openaiClient.calls.length, 0);
   } finally {
     removeDirectory(outputDirectory);
   }

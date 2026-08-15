@@ -79245,6 +79245,13 @@ var PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 var JPEG_SIGNATURE = Buffer.from([255, 216, 255]);
 var RIFF_SIGNATURE = Buffer.from("RIFF", "ascii");
 var WEBP_SIGNATURE = Buffer.from("WEBP", "ascii");
+var IHDR_CHUNK_TYPE = Buffer.from("IHDR", "ascii");
+var TRNS_CHUNK_TYPE = Buffer.from("tRNS", "ascii");
+var IDAT_CHUNK_TYPE = Buffer.from("IDAT", "ascii");
+var PNG_COLOR_TYPE_ALPHA_BIT = 4;
+var PNG_IHDR_TYPE_OFFSET = 12;
+var PNG_IHDR_COLOR_TYPE_OFFSET = 25;
+var PNG_CHUNK_OVERHEAD_BYTES = 12;
 function sniffImageMimeType(data) {
   if (data.length >= 8 && data.subarray(0, 8).equals(PNG_SIGNATURE)) {
     return "image/png";
@@ -79256,6 +79263,31 @@ function sniffImageMimeType(data) {
     return "image/webp";
   }
   return null;
+}
+function pngHasTransparencyChunk(data) {
+  let offset = PNG_SIGNATURE.length;
+  while (offset + 8 <= data.length) {
+    const chunkLength = data.readUInt32BE(offset);
+    const chunkType = data.subarray(offset + 4, offset + 8);
+    if (chunkType.equals(TRNS_CHUNK_TYPE)) {
+      return true;
+    }
+    if (chunkType.equals(IDAT_CHUNK_TYPE)) {
+      return false;
+    }
+    offset += PNG_CHUNK_OVERHEAD_BYTES + chunkLength;
+  }
+  return false;
+}
+function pngHasAlphaChannel(data) {
+  if (data.length <= PNG_IHDR_COLOR_TYPE_OFFSET || !data.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) || !data.subarray(PNG_IHDR_TYPE_OFFSET, PNG_IHDR_TYPE_OFFSET + 4).equals(IHDR_CHUNK_TYPE)) {
+    return null;
+  }
+  const colorType = data.readUInt8(PNG_IHDR_COLOR_TYPE_OFFSET);
+  if ((colorType & PNG_COLOR_TYPE_ALPHA_BIT) !== 0) {
+    return true;
+  }
+  return pngHasTransparencyChunk(data);
 }
 function loadReferenceImages(filePaths, logger2) {
   const images = [];
@@ -79546,6 +79578,24 @@ var MediaPipelineService = class {
           warnings
         };
       }
+      const hasAlpha = pngHasAlphaChannel(Buffer.from(mask.base64Data, "base64"));
+      if (hasAlpha === false) {
+        this.logger.warn("Rejected mask without an alpha channel", {
+          filePath: mask.filePath
+        });
+        return {
+          success: false,
+          errorCode: "MASK_WITHOUT_ALPHA_CHANNEL",
+          error: `Mask "${request.mask}" has no alpha channel. The transparent areas of the mask are the areas the model repaints, so an opaque PNG marks nothing \u2014 re-export it as RGBA with the region to repaint erased.`,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings
+        };
+      }
+      if (hasAlpha === null) {
+        this.logger.warn("Could not read the PNG header of the mask", {
+          filePath: mask.filePath
+        });
+      }
     }
     const generated = await client.generateImage({
       prompt: request.prompt,
@@ -79629,7 +79679,7 @@ var createAssetArgsSchema = external_exports.strictObject({
     error: (issue2) => issue2.input === void 0 ? "Required" : void 0
   }).trim().min(1, "Prompt is required").max(1e4, "Prompt must be at most 10000 characters long").describe("Detailed description of the image to generate"),
   referenceImages: external_exports.array(external_exports.string().trim().min(1, "Reference image path cannot be empty").max(1024, "Reference image path must be at most 1024 characters long")).max(5, "Maximum 5 reference images").optional().describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
-  mask: external_exports.string().trim().min(1, "Mask path cannot be empty").max(1024, "Mask path must be at most 1024 characters long").optional().describe("Absolute path to a PNG mask marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
+  mask: external_exports.string().trim().min(1, "Mask path cannot be empty").max(1024, "Mask path must be at most 1024 characters long").optional().describe("Absolute path to a PNG mask with an alpha channel marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
   outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path inside the configured output directory"),
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
   background: external_exports.enum(IMAGE_BACKGROUNDS).optional().describe("Background handling; transparent requires an alpha-capable format. OpenAI models only"),
@@ -79658,7 +79708,7 @@ var createAssetInputSchema = {
     },
     mask: {
       type: "string",
-      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions \u2014 the PNG signature and the presence of an alpha channel are checked locally, the dimension match is not and is left to the API. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
       minLength: 1,
       maxLength: 1024
     },

@@ -23,7 +23,7 @@ try:
 except ImportError as error:
     raise SystemExit(
         "Pillow is required. Install it with: "
-        "python -m pip install -r skills/character-reference-sheets/requirements.txt"
+        "python -m pip install -r /path/to/character-reference-sheets/requirements.txt"
     ) from error
 
 

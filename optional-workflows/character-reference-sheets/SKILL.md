@@ -41,7 +41,7 @@ result too — do not silently fix and re-run.
 installing the dependency, then run:
 
 ```bash
-python -m pip install -r skills/character-reference-sheets/requirements.txt
+python -m pip install -r /path/to/character-reference-sheets/requirements.txt
 ```
 
 If Pillow is unavailable and cannot be installed, do not generate: report that

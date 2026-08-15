@@ -7,6 +7,7 @@ AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integra
 - Generate images from text prompts using Google Gemini or OpenAI (gpt-image-2)
 - **Dual-provider support**: model name routes the request automatically (gpt-image*/dall-e* → OpenAI, everything else → Gemini)
 - Proactive Claude skill suggests images for websites, presentations, and more
+- Opt-in specialized workflows for narrower production pipelines, without adding them to every installation
 - **Two execution modes**: CLI script (skill-only) or MCP server (protocol-based)
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
 - Multiple model support (quality vs speed) across both providers
@@ -23,7 +24,7 @@ AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integra
 
 ### Quick Install (Claude Code Plugin)
 
-The plugin installs **skill + CLI + MCP server** in one step—no separate configuration needed.
+The plugin installs the **core image-generation skill + CLI + MCP server** in one step—no separate configuration needed. Specialized workflows are intentionally opt-in.
 
 ```bash
 # Add the marketplace
@@ -40,8 +41,9 @@ Or install directly from GitHub:
 ```
 
 Once installed:
-- **Skill** uses the bundled CLI script (no MCP overhead)
+- **Core skill** uses the bundled CLI script (no MCP overhead)
 - **MCP server** is also available for direct tool calls
+- **Specialized workflows** are not auto-installed; add only the ones you need
 
 > **Tip:** Since the skill runs the CLI directly, you can disable the MCP server in Claude Code's MCP list to reduce startup overhead. The skill will continue to work without it.
 
@@ -130,7 +132,20 @@ If not using the plugin:
 cp -r skills/image-generation ~/.claude/skills/
 ```
 
-#### 4. Build Extension from Source (Optional)
+#### 5. Install a Specialized Workflow (Optional)
+
+Specialized workflows live outside `skills/`, so the plugin does not discover
+or install them automatically. The current character-reference workflow is for
+dressing Blender character renders and preparing garments for image-to-3D tools.
+
+From a cloned repository:
+
+```bash
+python -m pip install -r optional-workflows/character-reference-sheets/requirements.txt
+cp -r optional-workflows/character-reference-sheets ~/.claude/skills/
+```
+
+#### 6. Build Extension from Source (Optional)
 
 To create your own `.mcpb` extension for Claude Desktop:
 
@@ -269,10 +284,16 @@ claude-image-gen/
 │   ├── icon.png          # Extension icon
 │   ├── package.json
 │   └── tsconfig.json
-├── skills/               # Claude skills
+├── skills/               # Core skills installed with the plugin
 │   └── image-generation/
 │       ├── SKILL.md      # Skill instructions (uses CLI)
 │       └── references/
+├── optional-workflows/   # Specialized skills installed explicitly
+│   └── character-reference-sheets/
+│       ├── SKILL.md
+│       ├── references/
+│       ├── requirements.txt
+│       └── scripts/
 ├── .mcp.json            # MCP configuration
 └── README.md
 ```
@@ -280,4 +301,3 @@ claude-image-gen/
 ## License
 
 MIT
-

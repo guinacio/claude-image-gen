@@ -2,6 +2,7 @@ import type { Logger } from "./runtime.js";
 import type { ReferenceImage } from "./types.js";
 export declare const SUPPORTED_REFERENCE_IMAGE_FORMATS = "PNG, JPEG, or WebP";
 export declare const MAX_REFERENCE_IMAGE_BYTES: number;
+export declare const MAX_MASK_BYTES: number;
 export type LoadReferenceImagesResult = {
     success: true;
     images: ReferenceImage[];
@@ -37,4 +38,14 @@ export type PngTransparency = "alpha-channel" | "transparency-chunk" | "none";
  * the PNG spec yet outside what the API says it accepts.
  */
 export declare function detectPngTransparency(data: Buffer): PngTransparency | null;
-export declare function loadReferenceImages(filePaths: string[], logger: Logger): LoadReferenceImagesResult;
+/**
+ * The mask travels through the same loader as the reference images but answers
+ * to a different set of API limits, so the caller states which one applies. The
+ * kind drives the error codes and the wording; the limit is separate because
+ * OpenAI caps masks well below what it accepts as a reference image.
+ */
+export interface LoadImagesOptions {
+    kind?: "reference-image" | "mask";
+    maxBytes?: number;
+}
+export declare function loadReferenceImages(filePaths: string[], logger: Logger, options?: LoadImagesOptions): LoadReferenceImagesResult;

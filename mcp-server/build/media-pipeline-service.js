@@ -1,7 +1,7 @@
 import { GeminiImageClient, fetchImageModels } from "./gemini-client.js";
 import { OpenAIImageClient, fetchOpenAIImageModels } from "./openai-client.js";
 import { ImageStorage } from "./image-storage.js";
-import { detectPngTransparency, loadReferenceImages } from "./reference-images.js";
+import { detectPngTransparency, loadReferenceImages, MAX_MASK_BYTES, } from "./reference-images.js";
 import { pathToFileURL } from "node:url";
 import { getApiKeyEnvVarForProvider, getDefaultModelForProvider, resolveProviderForModel, } from "./provider.js";
 import { formatErrorMessage, getFallbackImageModels, resolveDefaultModel, } from "./runtime.js";
@@ -189,10 +189,14 @@ export class MediaPipelineService {
             referenceImages = loaded.images;
         }
         // The mask goes through the same loader as the reference images so that the
-        // existence, size and magic-byte checks apply to it too.
+        // existence, size and magic-byte checks apply to it too, but under the mask's
+        // own 4MB API limit rather than the reference image allowance.
         let mask;
         if (request.mask) {
-            const loaded = loadReferenceImages([request.mask], this.logger);
+            const loaded = loadReferenceImages([request.mask], this.logger, {
+                kind: "mask",
+                maxBytes: MAX_MASK_BYTES,
+            });
             if (!loaded.success) {
                 return {
                     success: false,

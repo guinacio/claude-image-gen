@@ -409,8 +409,63 @@ test("createAsset reports a missing mask file through the reference image loader
     });
 
     assert.equal(response.success, false);
-    assert.equal(response.errorCode, "REFERENCE_IMAGE_NOT_FOUND");
+    assert.equal(response.errorCode, "MASK_NOT_FOUND");
+    assert.match(response.error, /^Mask not found:/);
     assert.equal(openaiClient.calls.length, 0);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset rejects a mask above the API's 4MB limit", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const basePath = writeFile(outputDirectory, "base.png", createPngBytes(6));
+    // Padded past 4MB but still well under the 20MB reference image allowance,
+    // so only the mask-specific limit can reject it.
+    const maskPath = writeFile(
+      outputDirectory,
+      "mask.png",
+      Buffer.concat([createPngBytes(6), Buffer.alloc(4 * 1024 * 1024)])
+    );
+
+    const response = await createMaskService(outputDirectory, openaiClient).createAsset({
+      prompt: "repaint the sky",
+      model: "gpt-image-2",
+      referenceImages: [basePath],
+      mask: maskPath,
+    });
+
+    assert.equal(response.success, false);
+    assert.equal(response.errorCode, "MASK_TOO_LARGE");
+    assert.match(response.error, /4MB size limit/);
+    assert.equal(openaiClient.calls.length, 0);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset still accepts a reference image larger than the mask limit", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const basePath = writeFile(
+      outputDirectory,
+      "base.png",
+      Buffer.concat([createPngBytes(6), Buffer.alloc(5 * 1024 * 1024)])
+    );
+
+    const response = await createMaskService(outputDirectory, openaiClient).createAsset({
+      prompt: "a wide landscape",
+      model: "gpt-image-2",
+      referenceImages: [basePath],
+    });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(openaiClient.calls.length, 1);
   } finally {
     removeDirectory(outputDirectory);
   }

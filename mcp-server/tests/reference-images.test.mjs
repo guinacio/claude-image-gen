@@ -7,6 +7,7 @@ import {
   detectPngTransparency,
   loadReferenceImages,
   sniffImageMimeType,
+  MAX_MASK_BYTES,
   MAX_REFERENCE_IMAGE_BYTES,
 } from "../build/reference-images.js";
 
@@ -147,6 +148,32 @@ test("loadReferenceImages rejects files exceeding the size limit", () => {
     assert.equal(result.success, false);
     assert.equal(result.errorCode, "REFERENCE_IMAGE_TOO_LARGE");
     assert.match(result.error, /size limit/);
+  } finally {
+    removeDirectory(directory);
+  }
+});
+
+test("loadReferenceImages reports mask failures under the mask's own limit and wording", () => {
+  const directory = createTempDirectory();
+  const maskPath = path.join(directory, "mask.png");
+  // Comfortably under the 20MB reference image allowance, over the 4MB mask cap.
+  fs.writeFileSync(maskPath, Buffer.concat([PNG_BYTES, Buffer.alloc(MAX_MASK_BYTES)]));
+
+  try {
+    assert.equal(
+      loadReferenceImages([maskPath], silentLogger).success,
+      true,
+      "the same file passes as a reference image"
+    );
+
+    const result = loadReferenceImages([maskPath], silentLogger, {
+      kind: "mask",
+      maxBytes: MAX_MASK_BYTES,
+    });
+
+    assert.equal(result.success, false);
+    assert.equal(result.errorCode, "MASK_TOO_LARGE");
+    assert.match(result.error, /^Mask ".*" exceeds the 4MB size limit\.$/);
   } finally {
     removeDirectory(directory);
   }

@@ -15,6 +15,11 @@ export const SUPPORTED_REFERENCE_IMAGE_FORMATS = "PNG, JPEG, or WebP";
 
 export const MAX_REFERENCE_IMAGE_BYTES = 20 * 1024 * 1024;
 
+// OpenAI caps the mask at 4MB unconditionally, unlike the image itself, whose
+// limit depends on the model (50MB on the GPT image models, 4MB on dall-e-2).
+// https://developers.openai.com/api/reference/python/resources/images/methods/edit
+export const MAX_MASK_BYTES = 4 * 1024 * 1024;
+
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff]);
 const RIFF_SIGNATURE = Buffer.from("RIFF", "ascii");
@@ -132,10 +137,29 @@ export function detectPngTransparency(data: Buffer): PngTransparency | null {
   return pngHasTransparencyChunk(data) ? "transparency-chunk" : "none";
 }
 
+/**
+ * The mask travels through the same loader as the reference images but answers
+ * to a different set of API limits, so the caller states which one applies. The
+ * kind drives the error codes and the wording; the limit is separate because
+ * OpenAI caps masks well below what it accepts as a reference image.
+ */
+export interface LoadImagesOptions {
+  kind?: "reference-image" | "mask";
+  maxBytes?: number;
+}
+
+const IMAGE_KIND_LABELS = {
+  "reference-image": { noun: "Reference image", errorCodePrefix: "REFERENCE_IMAGE" },
+  mask: { noun: "Mask", errorCodePrefix: "MASK" },
+} as const;
+
 export function loadReferenceImages(
   filePaths: string[],
-  logger: Logger
+  logger: Logger,
+  options: LoadImagesOptions = {}
 ): LoadReferenceImagesResult {
+  const { noun, errorCodePrefix } = IMAGE_KIND_LABELS[options.kind ?? "reference-image"];
+  const maxBytes = options.maxBytes ?? MAX_REFERENCE_IMAGE_BYTES;
   const images: ReferenceImage[] = [];
 
   for (const filePath of filePaths) {
@@ -144,36 +168,37 @@ export function loadReferenceImages(
       REFERENCE_IMAGE_MIME_TYPES[path.extname(resolved).toLowerCase()];
 
     if (!extensionMimeType) {
-      logger.warn("Rejected reference image with unsupported extension", {
+      logger.warn(`Rejected ${noun.toLowerCase()} with unsupported extension`, {
         filePath: resolved,
       });
       return {
         success: false,
-        errorCode: "REFERENCE_IMAGE_UNSUPPORTED_TYPE",
-        error: `Reference image "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`,
+        errorCode: `${errorCodePrefix}_UNSUPPORTED_TYPE`,
+        error: `${noun} "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`,
       };
     }
 
     if (!fs.existsSync(resolved)) {
-      logger.warn("Reference image not found", { filePath: resolved });
+      logger.warn(`${noun} not found`, { filePath: resolved });
       return {
         success: false,
-        errorCode: "REFERENCE_IMAGE_NOT_FOUND",
-        error: `Reference image not found: ${filePath}`,
+        errorCode: `${errorCodePrefix}_NOT_FOUND`,
+        error: `${noun} not found: ${filePath}`,
       };
     }
 
     try {
       const fileSize = fs.statSync(resolved).size;
-      if (fileSize > MAX_REFERENCE_IMAGE_BYTES) {
-        logger.warn("Rejected reference image exceeding the size limit", {
+      if (fileSize > maxBytes) {
+        logger.warn(`Rejected ${noun.toLowerCase()} exceeding the size limit`, {
           filePath: resolved,
           fileSize,
+          maxBytes,
         });
         return {
           success: false,
-          errorCode: "REFERENCE_IMAGE_TOO_LARGE",
-          error: `Reference image "${filePath}" exceeds the ${Math.floor(MAX_REFERENCE_IMAGE_BYTES / (1024 * 1024))}MB size limit.`,
+          errorCode: `${errorCodePrefix}_TOO_LARGE`,
+          error: `${noun} "${filePath}" exceeds the ${Math.floor(maxBytes / (1024 * 1024))}MB size limit.`,
         };
       }
 
@@ -181,13 +206,13 @@ export function loadReferenceImages(
       const detectedMimeType = sniffImageMimeType(data);
 
       if (!detectedMimeType) {
-        logger.warn("Rejected reference image with non-image content", {
+        logger.warn(`Rejected ${noun.toLowerCase()} with non-image content`, {
           filePath: resolved,
         });
         return {
           success: false,
-          errorCode: "REFERENCE_IMAGE_UNSUPPORTED_TYPE",
-          error: `Reference image "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`,
+          errorCode: `${errorCodePrefix}_UNSUPPORTED_TYPE`,
+          error: `${noun} "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`,
         };
       }
 
@@ -196,19 +221,19 @@ export function loadReferenceImages(
         base64Data: data.toString("base64"),
         mimeType: detectedMimeType,
       });
-      logger.debug("Loaded reference image", {
+      logger.debug(`Loaded ${noun.toLowerCase()}`, {
         filePath: resolved,
         mimeType: detectedMimeType,
       });
     } catch (error) {
-      logger.warn("Failed to read reference image", {
+      logger.warn(`Failed to read ${noun.toLowerCase()}`, {
         filePath: resolved,
         error: formatErrorMessage(error),
       });
       return {
         success: false,
-        errorCode: "REFERENCE_IMAGE_READ_ERROR",
-        error: `Failed to read reference image: ${filePath}`,
+        errorCode: `${errorCodePrefix}_READ_ERROR`,
+        error: `Failed to read ${noun.toLowerCase()}: ${filePath}`,
       };
     }
   }

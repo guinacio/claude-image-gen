@@ -146,6 +146,8 @@ python -m pip install -r optional-workflows/character-reference-sheets/requireme
 cp -r optional-workflows/character-reference-sheets ~/.claude/skills/
 ```
 
+Built a specialized workflow of your own? See [Contributing a Specialized Workflow](#contributing-a-specialized-workflow).
+
 #### 6. Build Extension from Source (Optional)
 
 To create your own `.mcpb` extension for Claude Desktop:
@@ -208,7 +210,7 @@ The server is dual-provider: it routes each request to Google Gemini or OpenAI (
 - **Aspect ratios on OpenAI**: OpenAI image models only support `1024x1024`, `1536x1024`, and `1024x1536`. Requested aspect ratios are mapped to the nearest supported size, and if the mapping isn't exact the response includes a warning describing the substitution.
 - **Reference images**: supported on both providers — pass up to 5 reference image paths to guide generation.
 - **`mask`, `background`, `outputFormat`**: OpenAI models only — Gemini models reject them.
-  - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages`, and [OpenAI documents](https://developers.openai.com/api/docs/guides/image-generation) the mask as needing an alpha channel and the same dimensions as the base image. Checked locally: the file really is a PNG, and it is not fully opaque — an opaque mask marks nothing, so it is rejected before the request is sent. Left to the API: the dimension match, and whether a PNG carrying transparency in a `tRNS` chunk instead of an alpha channel is accepted — that case is sent with a warning rather than blocked.
+  - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages`, and [OpenAI documents](https://developers.openai.com/api/docs/guides/image-generation) the mask as needing an alpha channel and the same dimensions as the base image. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit (masks are capped well below reference images, whose limit here is 20MB), and it is not fully opaque — an opaque mask marks nothing, so it is rejected before the request is sent. Left to the API: the dimension match, and whether a PNG carrying transparency in a `tRNS` chunk instead of an alpha channel is accepted — that case is sent with a warning rather than blocked.
   - `background` (`auto`, `transparent`, `opaque`) chooses how the background is handled. `transparent` needs an alpha-capable `outputFormat`, so `png` is selected automatically when `outputFormat` is omitted. `gpt-image-2` rejects `transparent`, and that combination is refused before the request is sent.
   - `outputFormat` (`png`, `jpeg`, `webp`) sets the encoding of the returned image; `jpeg` cannot carry transparency.
 
@@ -316,6 +318,33 @@ claude-image-gen/
 ├── .mcp.json            # MCP configuration
 └── README.md
 ```
+
+## Contributing a Specialized Workflow
+
+`optional-workflows/` exists for exactly this: workflows that are too specialized to belong in every installation, but general enough that other people would benefit from them. If you have built one, a PR adding it to that folder is welcome.
+
+The bar is that middle ground. `character-reference-sheets` is the reference example — it is narrow (dressing Blender character renders for image-to-3D tools) yet reusable by anyone doing that work. Something tied to your own file layout, employer, or one-off project is probably too specific; something that helps everyone generating images probably belongs in the core `skills/image-generation` skill instead.
+
+What a workflow needs:
+
+```
+optional-workflows/<your-workflow>/
+├── SKILL.md          # required: frontmatter with name + description, then the instructions
+├── references/       # optional: deeper documentation the skill points to
+├── scripts/          # optional: helper scripts
+└── requirements.txt  # optional: only if scripts have dependencies
+```
+
+A few things that make a workflow good rather than merely present:
+
+- **Write a `description` that says when *not* to use it.** Every skill in this repo competes for the same trigger space — `character-reference-sheets` ends its description by deferring website and banner imagery to the core skill. Without that, skills fire over each other.
+- **Say what you actually verified.** If a parameter's behaviour is an assumption rather than something you tested against the live API, write that down. The same discipline applies across `mcp-server/` and it is why the tool schemas distinguish verified claims from deferred ones.
+- **Respect that generations cost money.** Workflows that generate in a loop, or retry silently, spend the user's API credit without asking.
+- **Keep it self-contained.** Reference paths relative to the workflow folder, since users copy the directory to `~/.claude/skills/`.
+
+Adding a workflow does not need a version bump — nothing in `optional-workflows/` ships in the plugin or the `.mcpb`. Open a PR against `master` describing what the workflow is for and what you ran it against.
+
+Bug reports and fixes to the core skill, CLI, or MCP server are equally welcome — those do go through the [versioning](#versioning) flow, and `npm test` must pass.
 
 ## License
 

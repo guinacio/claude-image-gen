@@ -18,4 +18,11 @@ export type LoadReferenceImagesResult = {
  * extension (e.g. JPEG data in a .png) is sent with its true mime type.
  */
 export declare function sniffImageMimeType(data: Buffer): string | null;
+/**
+ * Reports whether a PNG can carry per-pixel transparency, by reading the IHDR
+ * colour type and, for the colour types without an alpha sample, checking for a
+ * tRNS chunk. Returns null when the buffer is not a PNG whose IHDR can be read,
+ * so callers can tell "no alpha" apart from "could not tell".
+ */
+export declare function pngHasAlphaChannel(data: Buffer): boolean | null;
 export declare function loadReferenceImages(filePaths: string[], logger: Logger): LoadReferenceImagesResult;

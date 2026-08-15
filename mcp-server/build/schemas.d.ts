@@ -47,7 +47,7 @@ export declare const createAssetInputSchema: {
         };
         readonly mask: {
             readonly type: "string";
-            readonly description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.";
+            readonly description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions — the PNG signature and the presence of an alpha channel are checked locally, the dimension match is not and is left to the API. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.";
             readonly minLength: 1;
             readonly maxLength: 1024;
         };

@@ -25,7 +25,7 @@ export const createAssetArgsSchema = z
         .min(1, "Mask path cannot be empty")
         .max(1024, "Mask path must be at most 1024 characters long")
         .optional()
-        .describe("Absolute path to a PNG mask marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
+        .describe("Absolute path to a PNG mask with an alpha channel marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
     outputPath: z
         .string()
         .trim()
@@ -75,7 +75,7 @@ export const createAssetInputSchema = {
         },
         mask: {
             type: "string",
-            description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+            description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions — the PNG signature and the presence of an alpha channel are checked locally, the dimension match is not and is left to the API. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
             minLength: 1,
             maxLength: 1024,
         },

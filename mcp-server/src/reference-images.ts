@@ -20,6 +20,21 @@ const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff]);
 const RIFF_SIGNATURE = Buffer.from("RIFF", "ascii");
 const WEBP_SIGNATURE = Buffer.from("WEBP", "ascii");
 
+const IHDR_CHUNK_TYPE = Buffer.from("IHDR", "ascii");
+const TRNS_CHUNK_TYPE = Buffer.from("tRNS", "ascii");
+const IDAT_CHUNK_TYPE = Buffer.from("IDAT", "ascii");
+
+// Bit 2 of the IHDR colour type marks the formats that store an alpha sample
+// per pixel: 4 (greyscale + alpha) and 6 (truecolour + alpha).
+const PNG_COLOR_TYPE_ALPHA_BIT = 0b100;
+
+// Offsets inside a PNG: the 8-byte signature is followed by the IHDR chunk,
+// whose 4-byte length and 4-byte type precede its 13 bytes of data. The colour
+// type is the 10th of those data bytes.
+const PNG_IHDR_TYPE_OFFSET = 12;
+const PNG_IHDR_COLOR_TYPE_OFFSET = 25;
+const PNG_CHUNK_OVERHEAD_BYTES = 12;
+
 export type LoadReferenceImagesResult =
   | { success: true; images: ReferenceImage[] }
   | { success: false; errorCode: string; error: string };
@@ -49,6 +64,58 @@ export function sniffImageMimeType(data: Buffer): string | null {
   }
 
   return null;
+}
+
+/**
+ * Walks the chunk list looking for a tRNS chunk, which is how greyscale,
+ * truecolour and indexed PNGs carry transparency instead of an alpha sample.
+ * tRNS must appear before the first IDAT, so the walk stops there.
+ */
+function pngHasTransparencyChunk(data: Buffer): boolean {
+  let offset = PNG_SIGNATURE.length;
+
+  while (offset + 8 <= data.length) {
+    const chunkLength = data.readUInt32BE(offset);
+    const chunkType = data.subarray(offset + 4, offset + 8);
+
+    if (chunkType.equals(TRNS_CHUNK_TYPE)) {
+      return true;
+    }
+
+    if (chunkType.equals(IDAT_CHUNK_TYPE)) {
+      return false;
+    }
+
+    offset += PNG_CHUNK_OVERHEAD_BYTES + chunkLength;
+  }
+
+  return false;
+}
+
+/**
+ * Reports whether a PNG can carry per-pixel transparency, by reading the IHDR
+ * colour type and, for the colour types without an alpha sample, checking for a
+ * tRNS chunk. Returns null when the buffer is not a PNG whose IHDR can be read,
+ * so callers can tell "no alpha" apart from "could not tell".
+ */
+export function pngHasAlphaChannel(data: Buffer): boolean | null {
+  if (
+    data.length <= PNG_IHDR_COLOR_TYPE_OFFSET ||
+    !data.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) ||
+    !data
+      .subarray(PNG_IHDR_TYPE_OFFSET, PNG_IHDR_TYPE_OFFSET + 4)
+      .equals(IHDR_CHUNK_TYPE)
+  ) {
+    return null;
+  }
+
+  const colorType = data.readUInt8(PNG_IHDR_COLOR_TYPE_OFFSET);
+
+  if ((colorType & PNG_COLOR_TYPE_ALPHA_BIT) !== 0) {
+    return true;
+  }
+
+  return pngHasTransparencyChunk(data);
 }
 
 export function loadReferenceImages(

@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   loadReferenceImages,
+  pngHasAlphaChannel,
   sniffImageMimeType,
   MAX_REFERENCE_IMAGE_BYTES,
 } from "../build/reference-images.js";
@@ -30,6 +31,31 @@ const WEBP_BYTES = Buffer.concat([
   Buffer.from("WEBP", "ascii"),
   Buffer.from("fake-webp-body"),
 ]);
+
+// PNG colour types: 0 greyscale, 2 truecolour, 3 indexed, 4 greyscale+alpha,
+// 6 truecolour+alpha.
+function createPngChunk(type, data) {
+  const header = Buffer.alloc(4);
+  header.writeUInt32BE(data.length, 0);
+  // pngHasAlphaChannel does not verify CRCs, so a zeroed placeholder is enough.
+  return Buffer.concat([header, Buffer.from(type, "ascii"), data, Buffer.alloc(4)]);
+}
+
+function createPng(colorType, { transparencyChunk = false } = {}) {
+  const ihdrData = Buffer.alloc(13);
+  ihdrData.writeUInt32BE(1, 0); // width
+  ihdrData.writeUInt32BE(1, 4); // height
+  ihdrData.writeUInt8(8, 8); // bit depth
+  ihdrData.writeUInt8(colorType, 9);
+
+  return Buffer.concat([
+    PNG_BYTES.subarray(0, 8),
+    createPngChunk("IHDR", ihdrData),
+    ...(transparencyChunk ? [createPngChunk("tRNS", Buffer.from([0x00]))] : []),
+    createPngChunk("IDAT", Buffer.from("fake-pixels")),
+    createPngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
 
 function createTempDirectory() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "media-pipeline-ref-test-"));
@@ -167,4 +193,36 @@ test("sniffImageMimeType detects each supported format and rejects others", () =
   assert.equal(sniffImageMimeType(Buffer.from("GIF89a")), null);
   assert.equal(sniffImageMimeType(Buffer.from("RIFF1234WAVE")), null);
   assert.equal(sniffImageMimeType(Buffer.alloc(0)), null);
+});
+
+test("pngHasAlphaChannel accepts the colour types that carry an alpha sample", () => {
+  assert.equal(pngHasAlphaChannel(createPng(4)), true, "greyscale + alpha");
+  assert.equal(pngHasAlphaChannel(createPng(6)), true, "truecolour + alpha");
+});
+
+test("pngHasAlphaChannel rejects colour types without transparency", () => {
+  assert.equal(pngHasAlphaChannel(createPng(0)), false, "greyscale");
+  assert.equal(pngHasAlphaChannel(createPng(2)), false, "truecolour");
+  assert.equal(pngHasAlphaChannel(createPng(3)), false, "indexed");
+});
+
+test("pngHasAlphaChannel accepts alpha-less colour types carrying a tRNS chunk", () => {
+  for (const colorType of [0, 2, 3]) {
+    assert.equal(
+      pngHasAlphaChannel(createPng(colorType, { transparencyChunk: true })),
+      true,
+      `colour type ${colorType} with tRNS`
+    );
+  }
+});
+
+test("pngHasAlphaChannel returns null when the PNG header cannot be read", () => {
+  assert.equal(pngHasAlphaChannel(PNG_BYTES), null, "no IHDR chunk");
+  assert.equal(pngHasAlphaChannel(JPEG_BYTES), null, "not a PNG");
+  assert.equal(pngHasAlphaChannel(Buffer.alloc(0)), null, "empty buffer");
+  assert.equal(
+    pngHasAlphaChannel(createPng(6).subarray(0, 20)),
+    null,
+    "truncated before the colour type"
+  );
 });

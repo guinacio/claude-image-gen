@@ -21,7 +21,6 @@ generated-images/
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
 # Logs
 *.log
@@ -36,9 +35,3 @@ __pycache__/
 
 # Claude
 .claude/
-
-# Fork-local scratch — must never reach an upstream PR
-NOTAS-*.md
-*.local.md
-/local/
-/scratch/

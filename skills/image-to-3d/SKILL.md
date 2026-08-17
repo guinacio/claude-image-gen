@@ -29,10 +29,74 @@ Needs `TRIPO_API_KEY` in the environment. Standard library only, no install.
 | `--yes` | actually submit and spend |
 | `--left`, `--back`, `--right` | supply your own views instead of letting Tripo invent them |
 | `--direct` | single-image path, skips multiview: cheaper, least accurate geometry |
-| `--texture` | also generate texture maps, 10 more credits (default: geometry only) |
-| `--face-limit N` | cap the polygon count |
-| `--geometry-quality detailed` | Tripo's Ultra mode, extra credits |
+| `--model-version` | `v3.1-20260211` (default) or `v3.0-20250812` |
 | `--name`, `--output-dir` | naming and destination |
+
+Texture — all inert unless `--texture` is passed:
+
+| Flag | Effect |
+|---|---|
+| `--texture` | also generate texture maps, 10 more credits (default: geometry only) |
+| `--texture-quality detailed` | +10 credits |
+| `--texture-alignment` | `original_image` (default) favours visual fidelity, `geometry` favours structure |
+| `--texture-seed N` | repeatable texture |
+
+Mesh:
+
+| Flag | Effect |
+|---|---|
+| `--face-limit N` | cap the polygon count |
+| `--geometry-quality detailed` | Tripo's Ultra mode, +20 credits |
+| `--smart-low-poly` | the Smart Mesh of the web UI: built topology instead of a collapsed dense mesh, +10 credits |
+| `--quad` | quads instead of triangles, +5 credits |
+| `--generate-parts` | model split into parts, +20 credits; refuses to combine with textures or `--quad` |
+| `--no-export-uv` | faster, but the mesh arrives with no UVs |
+| `--compress geometry` | geometry compression instead of the default meshopt |
+
+Other:
+
+| Flag | Effect |
+|---|---|
+| `--auto-size` | scale to real-world metres; requires `--texture` |
+| `--orientation align_image` | rotate the model to match the input image |
+| `--model-seed N` | repeatable geometry |
+| `--image-autofix` | let Tripo pre-process the input; slower |
+
+## Low poly: build it or collapse it
+
+Two ways to get a light mesh, and they are not equivalent.
+
+**Collapse it afterwards.** Decimate the dense GLB you already have, in Blender
+or any DCC. Free, keeps the shape you already approved, and preserves the UVs
+well enough that the baked texture still lands. On a reconstruction of an
+armoured character, 1.42M triangles came down to 150k with no visible
+difference at all, and 50k held up with only the plate edges softening. What it
+does *not* produce is topology: no deformation loops at shoulder, elbow or
+knee, so it stays a static prop or a sculpting block rather than something to
+rig.
+
+**Have Tripo build it.** `--smart-low-poly` is a different reconstruction, not
+a simplification of the previous one — a new `model_seed`, a new mesh from the
+same views. It costs 10 credits, 5 more with `--quad`, and it constrains
+`face_limit` to 1000-20000 (500-10000 with `--quad`), which is exactly the
+budget of a riggable game character. Tripo's own warning applies: *"Inputs with
+less complexity work best. There is a possibility of failure for complex
+models."* Fine detail and clean topology compete at that polygon count —
+expect separated fingers to merge and spikes to round off.
+
+Recorded result on the armoured character, `--smart-low-poly --quad
+--face-limit 10000`: 9859 quads and 2386 triangles, 11k vertices, one UV map,
+one material. Against the 15k decimation of the same subject the silhouette is
+comparable, but the wireframes are not: the decimation is a spray of thin
+slivers with the density landing wherever the collapse happened to leave it,
+while the smart mesh runs even quads that follow the surface, with ring loops
+around limbs. Only one of the two is editable.
+
+**`--quad` returns FBX, not GLB.** glTF has no quads, so the model URL of a
+quad job carries a `.fbx` file — `Kaydara FBX Binary` in the first bytes.
+`tripo.py` takes the extension from the URL for that reason; saving it as
+`.glb` yields a file no importer opens, and nothing reveals the mistake until
+the import fails.
 
 ## Supply your own views when the sides matter
 
@@ -53,6 +117,14 @@ inputs: [ {front: <token>}, {left: <token>}, {back: <token>}, {right: <token>} ]
 The front view is required, the rest are optional, and at least two images are
 needed in total. It is also **cheaper**, since the `image-to-multiview` step is
 skipped.
+
+**The list is positional.** Querying a finished task shows the API stored those
+views as `files`, a list of exactly four entries in the order
+`[front, left, back, right]`, with the names gone. The documented way to omit a
+view is to leave its slot without a file token, not to shorten the list — so a
+request carrying only a front and a back view, sent as two entries, risks having
+the back view read as a left view. `tripo.py` always sends four slots for that
+reason.
 
 The catch is consistency: Tripo asks that all views show the same object under
 consistent lighting. Three rules earn their keep here.
@@ -114,9 +186,19 @@ Geometry only is the default because reconstruction textures are baked from the
 input views and tend to be replaced in the DCC anyway. The mesh is identical
 either way — a model that arrived textured can simply have its material removed.
 
-Add-ons exist and stack on the base (HD texture +10, HD geometry +20, quad mesh
-+5, smart low-poly +10); the script requests none of them except
-`--geometry-quality detailed`.
+Add-ons stack on that base, and the script exposes all of them:
+
+| Add-on | Credits |
+|---|---|
+| `--texture-quality detailed` | +10 |
+| `--geometry-quality detailed` | +20 |
+| `--smart-low-poly` | +10 |
+| `--quad` | +5 |
+| `--generate-parts` | +20 |
+
+A dry run prints the add-ons it is about to request and the resulting total, and
+a finished task reports `credits_consumed` — worth reading, since it is the only
+confirmation of what was actually charged.
 
 ## API shape
 

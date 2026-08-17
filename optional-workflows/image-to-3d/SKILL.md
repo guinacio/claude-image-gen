@@ -200,6 +200,40 @@ A dry run prints the add-ons it is about to request and the resulting total, and
 a finished task reports `credits_consumed` — worth reading, since it is the only
 confirmation of what was actually charged.
 
+## What was verified, and what was only read
+
+The parameters below all come from Tripo's published reference, and `tripo.py`
+sends them under the documented names. That is not the same as having watched
+each one change a result, so this is the split.
+
+**Confirmed against the live API**, by reading back `GET /v3/tasks/{id}` after a
+paid job and comparing `input` and `credits_consumed` with what was asked for:
+
+| Parameter | What the run showed |
+|---|---|
+| `texture` + `pbr` | textured `multiview-to-model` billed exactly 30 credits |
+| `smart_low_poly` + `quad` + `face_limit: 10000` | billed 45, and returned 9859 quads with 2386 triangles — inside the requested cap |
+| `model_version` | echoed back as `v3.1-20260211`, so the field name is read |
+| `inputs` with named views | stored as positional `files`, names discarded |
+| `export_uv`, `geometry_quality: standard` | appear in the stored input as defaults, unset |
+
+Also confirmed by inspecting the downloaded file: a `quad` job answers with
+**FBX**, not glTF.
+
+**Documented but not exercised here.** Each one was accepted by a dry run, which
+only proves the flag parses and the cost adds up — not that Tripo honours it:
+`texture_quality`, `texture_alignment`, `texture_seed`, `model_seed`,
+`enable_image_autofix`, `auto_size`, `orientation`, `compress`, `export_uv:
+false`, `generate_parts`, `geometry_quality: detailed`. The pricing for those
+comes from the published table rather than from an observed
+`credits_consumed`, and the single-image paths (`--direct` and the
+`image-to-multiview` step) were not run either.
+
+The local validation rules — the `face_limit` ranges, `generate_parts` refusing
+textures and quads, `auto_size` needing a texture — are transcribed from the
+documentation, not discovered by having a job rejected. They fail early on
+purpose: cheaper than paying to find out.
+
 ## API shape
 
 ```

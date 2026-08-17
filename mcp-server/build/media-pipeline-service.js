@@ -1,7 +1,7 @@
 import { GeminiImageClient, fetchImageModels } from "./gemini-client.js";
 import { OpenAIImageClient, fetchOpenAIImageModels } from "./openai-client.js";
 import { ImageStorage } from "./image-storage.js";
-import { loadReferenceImages } from "./reference-images.js";
+import { detectPngTransparency, loadReferenceImages, MAX_MASK_BYTES, } from "./reference-images.js";
 import { pathToFileURL } from "node:url";
 import { getApiKeyEnvVarForProvider, getDefaultModelForProvider, resolveProviderForModel, } from "./provider.js";
 import { formatErrorMessage, getFallbackImageModels, resolveDefaultModel, } from "./runtime.js";
@@ -189,10 +189,14 @@ export class MediaPipelineService {
             referenceImages = loaded.images;
         }
         // The mask goes through the same loader as the reference images so that the
-        // existence, size and magic-byte checks apply to it too.
+        // existence, size and magic-byte checks apply to it too, but under the mask's
+        // own 4MB API limit rather than the reference image allowance.
         let mask;
         if (request.mask) {
-            const loaded = loadReferenceImages([request.mask], this.logger);
+            const loaded = loadReferenceImages([request.mask], this.logger, {
+                kind: "mask",
+                maxBytes: MAX_MASK_BYTES,
+            });
             if (!loaded.success) {
                 return {
                     success: false,
@@ -211,6 +215,33 @@ export class MediaPipelineService {
                     outputDirectory: this.imageStorage.getOutputDirectory(),
                     warnings,
                 };
+            }
+            // OpenAI repaints the fully transparent areas of the mask, so an opaque
+            // PNG has nothing for it to act on. Catching that here avoids a paid round
+            // trip that either fails or silently leaves the base image untouched.
+            const transparency = detectPngTransparency(Buffer.from(mask.base64Data, "base64"));
+            if (transparency === "none") {
+                this.logger.warn("Rejected fully opaque mask", {
+                    filePath: mask.filePath,
+                });
+                return {
+                    success: false,
+                    errorCode: "MASK_WITHOUT_ALPHA_CHANNEL",
+                    error: `Mask "${request.mask}" is fully opaque. The transparent areas of the mask are the areas the model repaints, so an opaque PNG marks nothing — re-export it as RGBA with the region to repaint erased.`,
+                    outputDirectory: this.imageStorage.getOutputDirectory(),
+                    warnings,
+                };
+            }
+            // A tRNS chunk is valid PNG transparency, but OpenAI documents the mask as
+            // needing an alpha channel. Not verified as rejected, so the request still
+            // goes out and the API gets to give its own answer.
+            if (transparency === "transparency-chunk") {
+                warnings.push(`Mask "${request.mask}" carries transparency in a tRNS chunk rather than an alpha channel. OpenAI documents masks as needing an alpha channel, so the API may reject it or ignore the marked region; re-exporting the mask as RGBA avoids the ambiguity.`);
+            }
+            if (transparency === null) {
+                this.logger.warn("Could not read the PNG header of the mask", {
+                    filePath: mask.filePath,
+                });
             }
         }
         const generated = await client.generateImage({

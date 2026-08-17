@@ -1,8 +1,10 @@
 node_modules/
 src/
 scripts/
+tests/
 .mcp.json
 .mcpbignore
+mcpb-contents.json
 icon.svg
 package.json
 package-lock.json

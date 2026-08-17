@@ -1,0 +1,9 @@
+{
+  "version": "1.2.1",
+  "files": {
+    "build/bundle.js": "9d8b235258f89087d150bb5c9e5dea7784d882b6cf3d15f805f701212e2a8fb8",
+    "build/cli.bundle.js": "a5cfb91d8d3b07310196b40fc5f4b229a8dfee64c54929e9839f76e71d028bf4",
+    "icon.png": "281f09a4f22cc7f768ea9d0746020ebc68a464afeea31f74e4c18f6de140c281",
+    "manifest.json": "50d66f85432942a6573370f307b13ba4b88afb093be33f6c8deb96cea6743743"
+  }
+}

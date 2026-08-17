@@ -4,8 +4,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  detectPngTransparency,
   loadReferenceImages,
   sniffImageMimeType,
+  MAX_MASK_BYTES,
   MAX_REFERENCE_IMAGE_BYTES,
 } from "../build/reference-images.js";
 
@@ -30,6 +32,31 @@ const WEBP_BYTES = Buffer.concat([
   Buffer.from("WEBP", "ascii"),
   Buffer.from("fake-webp-body"),
 ]);
+
+// PNG colour types: 0 greyscale, 2 truecolour, 3 indexed, 4 greyscale+alpha,
+// 6 truecolour+alpha.
+function createPngChunk(type, data) {
+  const header = Buffer.alloc(4);
+  header.writeUInt32BE(data.length, 0);
+  // pngHasAlphaChannel does not verify CRCs, so a zeroed placeholder is enough.
+  return Buffer.concat([header, Buffer.from(type, "ascii"), data, Buffer.alloc(4)]);
+}
+
+function createPng(colorType, { transparencyChunk = false } = {}) {
+  const ihdrData = Buffer.alloc(13);
+  ihdrData.writeUInt32BE(1, 0); // width
+  ihdrData.writeUInt32BE(1, 4); // height
+  ihdrData.writeUInt8(8, 8); // bit depth
+  ihdrData.writeUInt8(colorType, 9);
+
+  return Buffer.concat([
+    PNG_BYTES.subarray(0, 8),
+    createPngChunk("IHDR", ihdrData),
+    ...(transparencyChunk ? [createPngChunk("tRNS", Buffer.from([0x00]))] : []),
+    createPngChunk("IDAT", Buffer.from("fake-pixels")),
+    createPngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
 
 function createTempDirectory() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "media-pipeline-ref-test-"));
@@ -126,6 +153,32 @@ test("loadReferenceImages rejects files exceeding the size limit", () => {
   }
 });
 
+test("loadReferenceImages reports mask failures under the mask's own limit and wording", () => {
+  const directory = createTempDirectory();
+  const maskPath = path.join(directory, "mask.png");
+  // Comfortably under the 20MB reference image allowance, over the 4MB mask cap.
+  fs.writeFileSync(maskPath, Buffer.concat([PNG_BYTES, Buffer.alloc(MAX_MASK_BYTES)]));
+
+  try {
+    assert.equal(
+      loadReferenceImages([maskPath], silentLogger).success,
+      true,
+      "the same file passes as a reference image"
+    );
+
+    const result = loadReferenceImages([maskPath], silentLogger, {
+      kind: "mask",
+      maxBytes: MAX_MASK_BYTES,
+    });
+
+    assert.equal(result.success, false);
+    assert.equal(result.errorCode, "MASK_TOO_LARGE");
+    assert.match(result.error, /^Mask ".*" exceeds the 4MB size limit\.$/);
+  } finally {
+    removeDirectory(directory);
+  }
+});
+
 test("loadReferenceImages reports missing files using the caller-provided path", () => {
   const directory = createTempDirectory();
   const missingPath = path.join(directory, "missing.png");
@@ -167,4 +220,47 @@ test("sniffImageMimeType detects each supported format and rejects others", () =
   assert.equal(sniffImageMimeType(Buffer.from("GIF89a")), null);
   assert.equal(sniffImageMimeType(Buffer.from("RIFF1234WAVE")), null);
   assert.equal(sniffImageMimeType(Buffer.alloc(0)), null);
+});
+
+test("detectPngTransparency reports an alpha sample for colour types 4 and 6", () => {
+  assert.equal(detectPngTransparency(createPng(4)), "alpha-channel", "greyscale + alpha");
+  assert.equal(detectPngTransparency(createPng(6)), "alpha-channel", "truecolour + alpha");
+});
+
+test("detectPngTransparency reports opaque colour types without a tRNS chunk", () => {
+  assert.equal(detectPngTransparency(createPng(0)), "none", "greyscale");
+  assert.equal(detectPngTransparency(createPng(2)), "none", "truecolour");
+  assert.equal(detectPngTransparency(createPng(3)), "none", "indexed");
+});
+
+test("detectPngTransparency distinguishes tRNS transparency from an alpha channel", () => {
+  // The PNG spec allows tRNS only for colour types 0, 2 and 3; it is forbidden
+  // for the two types that already carry an alpha sample.
+  for (const colorType of [0, 2, 3]) {
+    assert.equal(
+      detectPngTransparency(createPng(colorType, { transparencyChunk: true })),
+      "transparency-chunk",
+      `colour type ${colorType} with tRNS`
+    );
+  }
+});
+
+test("detectPngTransparency ignores a tRNS chunk placed after the pixel data", () => {
+  const png = Buffer.concat([
+    createPng(2),
+    createPngChunk("tRNS", Buffer.from([0x00])),
+  ]);
+
+  assert.equal(detectPngTransparency(png), "none");
+});
+
+test("detectPngTransparency returns null when the PNG header cannot be read", () => {
+  assert.equal(detectPngTransparency(PNG_BYTES), null, "no IHDR chunk");
+  assert.equal(detectPngTransparency(JPEG_BYTES), null, "not a PNG");
+  assert.equal(detectPngTransparency(Buffer.alloc(0)), null, "empty buffer");
+  assert.equal(
+    detectPngTransparency(createPng(6).subarray(0, 20)),
+    null,
+    "truncated before the colour type"
+  );
 });

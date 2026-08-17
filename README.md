@@ -7,10 +7,12 @@ AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integra
 - Generate images from text prompts using Google Gemini or OpenAI (gpt-image-2)
 - **Dual-provider support**: model name routes the request automatically (gpt-image*/dall-e* → OpenAI, everything else → Gemini)
 - Proactive Claude skill suggests images for websites, presentations, and more
+- Opt-in specialized workflows for narrower production pipelines, without adding them to every installation
 - **Two execution modes**: CLI script (skill-only) or MCP server (protocol-based)
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
 - Multiple model support (quality vs speed) across both providers
 - Optional reference images to guide generation (up to 5, PNG/JPEG/WebP) on both providers
+- Inpainting with a PNG mask, plus `background` and `outputFormat` control, on OpenAI models
 - Images saved to disk within the configured output directory, with file paths returned
 - MCP server speaks the MCP 2026-07-28 spec, with backward compatibility for older MCP clients
 
@@ -23,7 +25,7 @@ AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integra
 
 ### Quick Install (Claude Code Plugin)
 
-The plugin installs **skill + CLI + MCP server** in one step—no separate configuration needed.
+The plugin installs the **core image-generation skill + CLI + MCP server** in one step—no separate configuration needed. Specialized workflows are intentionally opt-in.
 
 ```bash
 # Add the marketplace
@@ -40,8 +42,9 @@ Or install directly from GitHub:
 ```
 
 Once installed:
-- **Skill** uses the bundled CLI script (no MCP overhead)
+- **Core skill** uses the bundled CLI script (no MCP overhead)
 - **MCP server** is also available for direct tool calls
+- **Specialized workflows** are not auto-installed; add only the ones you need
 
 > **Tip:** Since the skill runs the CLI directly, you can disable the MCP server in Claude Code's MCP list to reduce startup overhead. The skill will continue to work without it.
 
@@ -130,7 +133,22 @@ If not using the plugin:
 cp -r skills/image-generation ~/.claude/skills/
 ```
 
-#### 4. Build Extension from Source (Optional)
+#### 5. Install a Specialized Workflow (Optional)
+
+Specialized workflows live outside `skills/`, so the plugin does not discover
+or install them automatically. The current character-reference workflow is for
+dressing Blender character renders and preparing garments for image-to-3D tools.
+
+From a cloned repository:
+
+```bash
+python -m pip install -r optional-workflows/character-reference-sheets/requirements.txt
+cp -r optional-workflows/character-reference-sheets ~/.claude/skills/
+```
+
+Built a specialized workflow of your own? See [Contributing a Specialized Workflow](#contributing-a-specialized-workflow).
+
+#### 6. Build Extension from Source (Optional)
 
 To create your own `.mcpb` extension for Claude Desktop:
 
@@ -141,6 +159,20 @@ npm run pack:mcpb
 ```
 
 This creates `mcp-server/media-pipeline.mcpb` using bundled runtime entry points for both the MCP server and the standalone CLI.
+
+The packed extension is committed to the repo and served from the Releases page, so it must not fall behind source. `pack:mcpb` records a hash of every packed file in `mcp-server/mcpb-contents.json`, and `npm test` recomputes them — change the source without repacking and the suite fails. The archive itself is not byte-reproducible (zip stores timestamps), which is why the inputs are hashed rather than the `.mcpb`.
+
+#### Versioning
+
+`mcp-server/package.json` is the single source of truth for the version. `mcp-server/manifest.json`, `mcp-server/package-lock.json`, `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are all derived from it — never edit their version fields by hand.
+
+To bump:
+
+```bash
+cd mcp-server && npm version minor --no-git-tag-version
+```
+
+`npm version` updates `package.json` and the lockfile, then the `version` lifecycle script propagates it to the remaining manifests and stages them. `npm run sync:version` does the same propagation on its own, and `npm run check:version` reports drift without writing. Both `npm test` and `npm run pack:mcpb` fail on drift, so a release cannot ship with mismatched manifests.
 
 ## Usage
 
@@ -179,6 +211,12 @@ The server is dual-provider: it routes each request to Google Gemini or OpenAI (
 
 - **Aspect ratios on OpenAI**: OpenAI image models only support `1024x1024`, `1536x1024`, and `1024x1536`. Requested aspect ratios are mapped to the nearest supported size, and if the mapping isn't exact the response includes a warning describing the substitution.
 - **Reference images**: supported on both providers — pass up to 5 reference image paths to guide generation.
+- **`mask`, `background`, `outputFormat`**: OpenAI models only — Gemini models reject them.
+  - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages`, and [OpenAI documents](https://developers.openai.com/api/docs/guides/image-generation) the mask as needing an alpha channel and the same dimensions as the base image. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit (masks are capped well below reference images, whose limit here is 20MB), and it is not fully opaque — an opaque mask marks nothing, so it is rejected before the request is sent. Left to the API: the dimension match, and whether a PNG carrying transparency in a `tRNS` chunk instead of an alpha channel is accepted — that case is sent with a warning rather than blocked.
+  - `background` (`auto`, `transparent`, `opaque`) chooses how the background is handled. `transparent` needs an alpha-capable `outputFormat`, so `png` is selected automatically when `outputFormat` is omitted. `gpt-image-2` rejects `transparent`, and that combination is refused before the request is sent.
+  - `outputFormat` (`png`, `jpeg`, `webp`) sets the encoding of the returned image; `jpeg` cannot carry transparency.
+
+  Apart from the `gpt-image-2`/`transparent` case above, these three options have not been verified against a live API — when a model refuses one, the API's own reason is returned.
 
 ### Models
 
@@ -269,15 +307,47 @@ claude-image-gen/
 │   ├── icon.png          # Extension icon
 │   ├── package.json
 │   └── tsconfig.json
-├── skills/               # Claude skills
+├── skills/               # Core skills installed with the plugin
 │   └── image-generation/
 │       ├── SKILL.md      # Skill instructions (uses CLI)
 │       └── references/
+├── optional-workflows/   # Specialized skills installed explicitly
+│   └── character-reference-sheets/
+│       ├── SKILL.md
+│       ├── references/
+│       ├── requirements.txt
+│       └── scripts/
 ├── .mcp.json            # MCP configuration
 └── README.md
 ```
 
+## Contributing a Specialized Workflow
+
+`optional-workflows/` exists for exactly this: workflows that are too specialized to belong in every installation, but general enough that other people would benefit from them. If you have built one, a PR adding it to that folder is welcome.
+
+The bar is that middle ground. `character-reference-sheets` is the reference example — it is narrow (dressing Blender character renders for image-to-3D tools) yet reusable by anyone doing that work. Something tied to your own file layout, employer, or one-off project is probably too specific; something that helps everyone generating images probably belongs in the core `skills/image-generation` skill instead.
+
+What a workflow needs:
+
+```
+optional-workflows/<your-workflow>/
+├── SKILL.md          # required: frontmatter with name + description, then the instructions
+├── references/       # optional: deeper documentation the skill points to
+├── scripts/          # optional: helper scripts
+└── requirements.txt  # optional: only if scripts have dependencies
+```
+
+A few things that make a workflow good rather than merely present:
+
+- **Write a `description` that says when *not* to use it.** Every skill in this repo competes for the same trigger space — `character-reference-sheets` ends its description by deferring website and banner imagery to the core skill. Without that, skills fire over each other.
+- **Say what you actually verified.** If a parameter's behaviour is an assumption rather than something you tested against the live API, write that down. The same discipline applies across `mcp-server/` and it is why the tool schemas distinguish verified claims from deferred ones.
+- **Respect that generations cost money.** Workflows that generate in a loop, or retry silently, spend the user's API credit without asking.
+- **Keep it self-contained.** Reference paths relative to the workflow folder, since users copy the directory to `~/.claude/skills/`.
+
+Adding a workflow does not need a version bump — nothing in `optional-workflows/` ships in the plugin or the `.mcpb`. Open a PR against `master` describing what the workflow is for and what you ran it against.
+
+Bug reports and fixes to the core skill, CLI, or MCP server are equally welcome — those do go through the [versioning](#versioning) flow, and `npm test` must pass.
+
 ## License
 
 MIT
-

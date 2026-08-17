@@ -50067,10 +50067,18 @@ var REFERENCE_IMAGE_MIME_TYPES = {
 };
 var SUPPORTED_REFERENCE_IMAGE_FORMATS = "PNG, JPEG, or WebP";
 var MAX_REFERENCE_IMAGE_BYTES = 20 * 1024 * 1024;
+var MAX_MASK_BYTES = 4 * 1024 * 1024;
 var PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 var JPEG_SIGNATURE = Buffer.from([255, 216, 255]);
 var RIFF_SIGNATURE = Buffer.from("RIFF", "ascii");
 var WEBP_SIGNATURE = Buffer.from("WEBP", "ascii");
+var IHDR_CHUNK_TYPE = Buffer.from("IHDR", "ascii");
+var TRNS_CHUNK_TYPE = Buffer.from("tRNS", "ascii");
+var IDAT_CHUNK_TYPE = Buffer.from("IDAT", "ascii");
+var PNG_COLOR_TYPE_ALPHA_BIT = 4;
+var PNG_IHDR_TYPE_OFFSET = 12;
+var PNG_IHDR_COLOR_TYPE_OFFSET = 25;
+var PNG_CHUNK_OVERHEAD_BYTES = 12;
 function sniffImageMimeType(data) {
   if (data.length >= 8 && data.subarray(0, 8).equals(PNG_SIGNATURE)) {
     return "image/png";
@@ -50083,52 +50091,84 @@ function sniffImageMimeType(data) {
   }
   return null;
 }
-function loadReferenceImages(filePaths, logger) {
+function pngHasTransparencyChunk(data) {
+  let offset = PNG_SIGNATURE.length;
+  while (offset + 8 <= data.length) {
+    const chunkLength = data.readUInt32BE(offset);
+    const chunkType = data.subarray(offset + 4, offset + 8);
+    if (chunkType.equals(TRNS_CHUNK_TYPE)) {
+      return true;
+    }
+    if (chunkType.equals(IDAT_CHUNK_TYPE)) {
+      return false;
+    }
+    offset += PNG_CHUNK_OVERHEAD_BYTES + chunkLength;
+  }
+  return false;
+}
+function detectPngTransparency(data) {
+  if (data.length <= PNG_IHDR_COLOR_TYPE_OFFSET || !data.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) || !data.subarray(PNG_IHDR_TYPE_OFFSET, PNG_IHDR_TYPE_OFFSET + 4).equals(IHDR_CHUNK_TYPE)) {
+    return null;
+  }
+  const colorType = data.readUInt8(PNG_IHDR_COLOR_TYPE_OFFSET);
+  if ((colorType & PNG_COLOR_TYPE_ALPHA_BIT) !== 0) {
+    return "alpha-channel";
+  }
+  return pngHasTransparencyChunk(data) ? "transparency-chunk" : "none";
+}
+var IMAGE_KIND_LABELS = {
+  "reference-image": { noun: "Reference image", errorCodePrefix: "REFERENCE_IMAGE" },
+  mask: { noun: "Mask", errorCodePrefix: "MASK" }
+};
+function loadReferenceImages(filePaths, logger, options = {}) {
+  const { noun, errorCodePrefix } = IMAGE_KIND_LABELS[options.kind ?? "reference-image"];
+  const maxBytes = options.maxBytes ?? MAX_REFERENCE_IMAGE_BYTES;
   const images = [];
   for (const filePath of filePaths) {
     const resolved = path5.resolve(filePath);
     const extensionMimeType = REFERENCE_IMAGE_MIME_TYPES[path5.extname(resolved).toLowerCase()];
     if (!extensionMimeType) {
-      logger.warn("Rejected reference image with unsupported extension", {
+      logger.warn(`Rejected ${noun.toLowerCase()} with unsupported extension`, {
         filePath: resolved
       });
       return {
         success: false,
-        errorCode: "REFERENCE_IMAGE_UNSUPPORTED_TYPE",
-        error: `Reference image "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`
+        errorCode: `${errorCodePrefix}_UNSUPPORTED_TYPE`,
+        error: `${noun} "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`
       };
     }
     if (!fs4.existsSync(resolved)) {
-      logger.warn("Reference image not found", { filePath: resolved });
+      logger.warn(`${noun} not found`, { filePath: resolved });
       return {
         success: false,
-        errorCode: "REFERENCE_IMAGE_NOT_FOUND",
-        error: `Reference image not found: ${filePath}`
+        errorCode: `${errorCodePrefix}_NOT_FOUND`,
+        error: `${noun} not found: ${filePath}`
       };
     }
     try {
       const fileSize = fs4.statSync(resolved).size;
-      if (fileSize > MAX_REFERENCE_IMAGE_BYTES) {
-        logger.warn("Rejected reference image exceeding the size limit", {
+      if (fileSize > maxBytes) {
+        logger.warn(`Rejected ${noun.toLowerCase()} exceeding the size limit`, {
           filePath: resolved,
-          fileSize
+          fileSize,
+          maxBytes
         });
         return {
           success: false,
-          errorCode: "REFERENCE_IMAGE_TOO_LARGE",
-          error: `Reference image "${filePath}" exceeds the ${Math.floor(MAX_REFERENCE_IMAGE_BYTES / (1024 * 1024))}MB size limit.`
+          errorCode: `${errorCodePrefix}_TOO_LARGE`,
+          error: `${noun} "${filePath}" exceeds the ${Math.floor(maxBytes / (1024 * 1024))}MB size limit.`
         };
       }
       const data = fs4.readFileSync(resolved);
       const detectedMimeType = sniffImageMimeType(data);
       if (!detectedMimeType) {
-        logger.warn("Rejected reference image with non-image content", {
+        logger.warn(`Rejected ${noun.toLowerCase()} with non-image content`, {
           filePath: resolved
         });
         return {
           success: false,
-          errorCode: "REFERENCE_IMAGE_UNSUPPORTED_TYPE",
-          error: `Reference image "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`
+          errorCode: `${errorCodePrefix}_UNSUPPORTED_TYPE`,
+          error: `${noun} "${filePath}" must be a ${SUPPORTED_REFERENCE_IMAGE_FORMATS} file.`
         };
       }
       images.push({
@@ -50136,19 +50176,19 @@ function loadReferenceImages(filePaths, logger) {
         base64Data: data.toString("base64"),
         mimeType: detectedMimeType
       });
-      logger.debug("Loaded reference image", {
+      logger.debug(`Loaded ${noun.toLowerCase()}`, {
         filePath: resolved,
         mimeType: detectedMimeType
       });
     } catch (error51) {
-      logger.warn("Failed to read reference image", {
+      logger.warn(`Failed to read ${noun.toLowerCase()}`, {
         filePath: resolved,
         error: formatErrorMessage(error51)
       });
       return {
         success: false,
-        errorCode: "REFERENCE_IMAGE_READ_ERROR",
-        error: `Failed to read reference image: ${filePath}`
+        errorCode: `${errorCodePrefix}_READ_ERROR`,
+        error: `Failed to read ${noun.toLowerCase()}: ${filePath}`
       };
     }
   }
@@ -50352,7 +50392,10 @@ var MediaPipelineService = class {
     }
     let mask;
     if (request.mask) {
-      const loaded = loadReferenceImages([request.mask], this.logger);
+      const loaded = loadReferenceImages([request.mask], this.logger, {
+        kind: "mask",
+        maxBytes: MAX_MASK_BYTES
+      });
       if (!loaded.success) {
         return {
           success: false,
@@ -50371,6 +50414,27 @@ var MediaPipelineService = class {
           outputDirectory: this.imageStorage.getOutputDirectory(),
           warnings
         };
+      }
+      const transparency = detectPngTransparency(Buffer.from(mask.base64Data, "base64"));
+      if (transparency === "none") {
+        this.logger.warn("Rejected fully opaque mask", {
+          filePath: mask.filePath
+        });
+        return {
+          success: false,
+          errorCode: "MASK_WITHOUT_ALPHA_CHANNEL",
+          error: `Mask "${request.mask}" is fully opaque. The transparent areas of the mask are the areas the model repaints, so an opaque PNG marks nothing \u2014 re-export it as RGBA with the region to repaint erased.`,
+          outputDirectory: this.imageStorage.getOutputDirectory(),
+          warnings
+        };
+      }
+      if (transparency === "transparency-chunk") {
+        warnings.push(`Mask "${request.mask}" carries transparency in a tRNS chunk rather than an alpha channel. OpenAI documents masks as needing an alpha channel, so the API may reject it or ignore the marked region; re-exporting the mask as RGBA avoids the ambiguity.`);
+      }
+      if (transparency === null) {
+        this.logger.warn("Could not read the PNG header of the mask", {
+          filePath: mask.filePath
+        });
       }
     }
     const generated = await client.generateImage({
@@ -64966,7 +65030,7 @@ var createAssetArgsSchema = external_exports.strictObject({
     error: (issue2) => issue2.input === void 0 ? "Required" : void 0
   }).trim().min(1, "Prompt is required").max(1e4, "Prompt must be at most 10000 characters long").describe("Detailed description of the image to generate"),
   referenceImages: external_exports.array(external_exports.string().trim().min(1, "Reference image path cannot be empty").max(1024, "Reference image path must be at most 1024 characters long")).max(5, "Maximum 5 reference images").optional().describe("Absolute file paths to PNG, JPEG, or WebP reference images to include with the prompt for style/character consistency"),
-  mask: external_exports.string().trim().min(1, "Mask path cannot be empty").max(1024, "Mask path must be at most 1024 characters long").optional().describe("Absolute path to a PNG mask marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
+  mask: external_exports.string().trim().min(1, "Mask path cannot be empty").max(1024, "Mask path must be at most 1024 characters long").optional().describe("Absolute path to a PNG mask with an alpha channel marking the region to repaint. OpenAI models only, and only alongside referenceImages"),
   outputPath: external_exports.string().trim().min(1, "outputPath cannot be empty").max(1024, "outputPath must be at most 1024 characters long").optional().describe("Custom output file path inside the configured output directory"),
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
   background: external_exports.enum(IMAGE_BACKGROUNDS).optional().describe("Background handling; transparent requires an alpha-capable format. OpenAI models only"),
@@ -64995,7 +65059,7 @@ var createAssetInputSchema = {
     },
     mask: {
       type: "string",
-      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and must match their dimensions. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and OpenAI documents the mask as needing an alpha channel and matching dimensions. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit, and it is not fully opaque (an opaque mask marks nothing and is rejected before the request is sent). Not checked locally and left to the API: the dimension match, and whether a PNG carrying transparency in a tRNS chunk instead of an alpha channel is accepted \u2014 that case is sent with a warning. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
       minLength: 1,
       maxLength: 1024
     },

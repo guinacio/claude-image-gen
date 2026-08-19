@@ -1,0 +1,4 @@
+# scripts/tripo.py needs only the Python standard library.
+# scripts/normalize_views.py needs these:
+pillow>=10.0
+numpy>=1.24

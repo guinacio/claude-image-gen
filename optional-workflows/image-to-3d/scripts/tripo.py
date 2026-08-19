@@ -349,17 +349,22 @@ def reconstruction_body(args, textured):
 
 
 def view_slots(front_token, supplied_views):
-    """Build the four positional slots the API expects.
+    """Build the view-key entries the API expects.
 
-    The API stores the views as a list of exactly four entries in the order
-    [front, left, back, right], and a missing view is a slot without a token
-    rather than a shorter list. Sending named keys works, but sending four
-    slots means a run that supplies only --back cannot have that view land in
-    the left position."""
+    Each entry carries exactly one key among front, left, back and right, and
+    the order does not matter -- the server canonicalises them. A view that was
+    not supplied is therefore an omitted entry, not an empty one: an entry with
+    no key is rejected with `1004 inputs[n] must include one of
+    front|left|back|right`.
+
+    Padding to four slots belongs to the separate legacy positional format,
+    which takes four bare strings with "" for a skipped view. The two formats
+    cannot be mixed."""
     slots = [{"front": front_token}]
     for view in VIEW_ORDER[1:]:
         token = supplied_views.get(view)
-        slots.append({view: token} if token else {})
+        if token:
+            slots.append({view: token})
     return slots
 
 

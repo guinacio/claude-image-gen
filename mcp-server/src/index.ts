@@ -16,7 +16,7 @@ const logger = createLogger("server", runtimeConfig.logLevel);
 
 if (!hasAnyApiKey(runtimeConfig)) {
   logger.error(
-    "At least one provider API key is required: set GEMINI_API_KEY and/or OPENAI_API_KEY"
+    "At least one provider API key is required: set GEMINI_API_KEY, OPENAI_API_KEY, and/or ATLASCLOUD_API_KEY"
   );
   process.exit(1);
 }
@@ -33,7 +33,7 @@ function createServer(): McpServer {
   const server = new McpServer(
     {
       name: "media-pipeline",
-      version: "1.1.2",
+      version: "1.3.0",
     },
     {
       capabilities: {
@@ -88,6 +88,7 @@ function main() {
     defaultProvider: runtimeConfig.defaultProvider,
     geminiDefaultModel: runtimeConfig.geminiDefaultModel,
     openaiDefaultModel: runtimeConfig.openaiDefaultModel,
+    atlasDefaultModel: runtimeConfig.atlasDefaultModel,
     outputDirectory: mediaPipelineService.getOutputDirectory(),
     requestTimeoutMs: runtimeConfig.requestTimeoutMs,
   });

@@ -6955,7 +6955,7 @@ var init_multipart_parser = __esm({
 // node_modules/node-fetch/src/body.js
 import Stream, { PassThrough } from "node:stream";
 import { types, deprecate, promisify } from "node:util";
-import { Buffer as Buffer2 } from "node:buffer";
+import { Buffer as Buffer3 } from "node:buffer";
 async function consumeBody(data) {
   if (data[INTERNALS].disturbed) {
     throw new TypeError(`body used already for: ${data.url}`);
@@ -6966,10 +6966,10 @@ async function consumeBody(data) {
   }
   const { body } = data;
   if (body === null) {
-    return Buffer2.alloc(0);
+    return Buffer3.alloc(0);
   }
   if (!(body instanceof Stream)) {
-    return Buffer2.alloc(0);
+    return Buffer3.alloc(0);
   }
   const accum = [];
   let accumBytes = 0;
@@ -6990,9 +6990,9 @@ async function consumeBody(data) {
   if (body.readableEnded === true || body._readableState.ended === true) {
     try {
       if (accum.every((c) => typeof c === "string")) {
-        return Buffer2.from(accum.join(""));
+        return Buffer3.from(accum.join(""));
       }
-      return Buffer2.concat(accum, accumBytes);
+      return Buffer3.concat(accum, accumBytes);
     } catch (error51) {
       throw new FetchError(`Could not create Buffer from response body for ${data.url}: ${error51.message}`, "system", error51);
     }
@@ -7018,22 +7018,22 @@ var init_body = __esm({
         if (body === null) {
           body = null;
         } else if (isURLSearchParameters(body)) {
-          body = Buffer2.from(body.toString());
+          body = Buffer3.from(body.toString());
         } else if (isBlob(body)) {
-        } else if (Buffer2.isBuffer(body)) {
+        } else if (Buffer3.isBuffer(body)) {
         } else if (types.isAnyArrayBuffer(body)) {
-          body = Buffer2.from(body);
+          body = Buffer3.from(body);
         } else if (ArrayBuffer.isView(body)) {
-          body = Buffer2.from(body.buffer, body.byteOffset, body.byteLength);
+          body = Buffer3.from(body.buffer, body.byteOffset, body.byteLength);
         } else if (body instanceof Stream) {
         } else if (body instanceof FormData2) {
           body = formDataToBlob(body);
           boundary = body.type.split("=")[1];
         } else {
-          body = Buffer2.from(String(body));
+          body = Buffer3.from(String(body));
         }
         let stream = body;
-        if (Buffer2.isBuffer(body)) {
+        if (Buffer3.isBuffer(body)) {
           stream = Stream.Readable.from(body);
         } else if (isBlob(body)) {
           stream = Stream.Readable.from(body.stream());
@@ -7170,7 +7170,7 @@ var init_body = __esm({
       if (isBlob(body)) {
         return body.type || null;
       }
-      if (Buffer2.isBuffer(body) || types.isAnyArrayBuffer(body) || ArrayBuffer.isView(body)) {
+      if (Buffer3.isBuffer(body) || types.isAnyArrayBuffer(body) || ArrayBuffer.isView(body)) {
         return null;
       }
       if (body instanceof FormData2) {
@@ -7192,7 +7192,7 @@ var init_body = __esm({
       if (isBlob(body)) {
         return body.size;
       }
-      if (Buffer2.isBuffer(body)) {
+      if (Buffer3.isBuffer(body)) {
         return body.length;
       }
       if (body && typeof body.getLengthSync === "function") {
@@ -7938,7 +7938,7 @@ import http2 from "node:http";
 import https from "node:https";
 import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
-import { Buffer as Buffer3 } from "node:buffer";
+import { Buffer as Buffer4 } from "node:buffer";
 async function fetch2(url2, options_) {
   return new Promise((resolve3, reject) => {
     const request = new Request(url2, options_);
@@ -8169,7 +8169,7 @@ async function fetch2(url2, options_) {
   });
 }
 function fixResponseChunkedTransferBadEnding(request, errorCallback) {
-  const LAST_CHUNK = Buffer3.from("0\r\n\r\n");
+  const LAST_CHUNK = Buffer4.from("0\r\n\r\n");
   let isChunkedTransfer = false;
   let properLastChunkReceived = false;
   let previousChunk;
@@ -8186,9 +8186,9 @@ function fixResponseChunkedTransferBadEnding(request, errorCallback) {
       }
     };
     const onData = (buf) => {
-      properLastChunkReceived = Buffer3.compare(buf.slice(-5), LAST_CHUNK) === 0;
+      properLastChunkReceived = Buffer4.compare(buf.slice(-5), LAST_CHUNK) === 0;
       if (!properLastChunkReceived && previousChunk) {
-        properLastChunkReceived = Buffer3.compare(previousChunk.slice(-3), LAST_CHUNK.slice(0, 3)) === 0 && Buffer3.compare(buf.slice(-2), LAST_CHUNK.slice(3)) === 0;
+        properLastChunkReceived = Buffer4.compare(previousChunk.slice(-3), LAST_CHUNK.slice(0, 3)) === 0 && Buffer4.compare(buf.slice(-2), LAST_CHUNK.slice(3)) === 0;
       }
       previousChunk = buf;
     };
@@ -11496,34 +11496,34 @@ var require_crypto3 = __commonJS({
 var require_safe_buffer = __commonJS({
   "node_modules/safe-buffer/index.js"(exports, module) {
     var buffer = __require("buffer");
-    var Buffer4 = buffer.Buffer;
+    var Buffer5 = buffer.Buffer;
     function copyProps(src, dst) {
       for (var key in src) {
         dst[key] = src[key];
       }
     }
-    if (Buffer4.from && Buffer4.alloc && Buffer4.allocUnsafe && Buffer4.allocUnsafeSlow) {
+    if (Buffer5.from && Buffer5.alloc && Buffer5.allocUnsafe && Buffer5.allocUnsafeSlow) {
       module.exports = buffer;
     } else {
       copyProps(buffer, exports);
       exports.Buffer = SafeBuffer;
     }
     function SafeBuffer(arg, encodingOrOffset, length) {
-      return Buffer4(arg, encodingOrOffset, length);
+      return Buffer5(arg, encodingOrOffset, length);
     }
-    SafeBuffer.prototype = Object.create(Buffer4.prototype);
-    copyProps(Buffer4, SafeBuffer);
+    SafeBuffer.prototype = Object.create(Buffer5.prototype);
+    copyProps(Buffer5, SafeBuffer);
     SafeBuffer.from = function(arg, encodingOrOffset, length) {
       if (typeof arg === "number") {
         throw new TypeError("Argument must not be a number");
       }
-      return Buffer4(arg, encodingOrOffset, length);
+      return Buffer5(arg, encodingOrOffset, length);
     };
     SafeBuffer.alloc = function(size, fill, encoding) {
       if (typeof size !== "number") {
         throw new TypeError("Argument must be a number");
       }
-      var buf = Buffer4(size);
+      var buf = Buffer5(size);
       if (fill !== void 0) {
         if (typeof encoding === "string") {
           buf.fill(fill, encoding);
@@ -11539,7 +11539,7 @@ var require_safe_buffer = __commonJS({
       if (typeof size !== "number") {
         throw new TypeError("Argument must be a number");
       }
-      return Buffer4(size);
+      return Buffer5(size);
     };
     SafeBuffer.allocUnsafeSlow = function(size) {
       if (typeof size !== "number") {
@@ -11578,7 +11578,7 @@ var require_param_bytes_for_alg = __commonJS({
 var require_ecdsa_sig_formatter = __commonJS({
   "node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
     "use strict";
-    var Buffer4 = require_safe_buffer().Buffer;
+    var Buffer5 = require_safe_buffer().Buffer;
     var getParamBytesForAlg = require_param_bytes_for_alg();
     var MAX_OCTET = 128;
     var CLASS_UNIVERSAL = 0;
@@ -11591,10 +11591,10 @@ var require_ecdsa_sig_formatter = __commonJS({
       return base643.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
     }
     function signatureAsBuffer(signature) {
-      if (Buffer4.isBuffer(signature)) {
+      if (Buffer5.isBuffer(signature)) {
         return signature;
       } else if ("string" === typeof signature) {
-        return Buffer4.from(signature, "base64");
+        return Buffer5.from(signature, "base64");
       }
       throw new TypeError("ECDSA signature must be a Base64 string or a Buffer");
     }
@@ -11642,7 +11642,7 @@ var require_ecdsa_sig_formatter = __commonJS({
         throw new Error('Expected to consume entire buffer, but "' + (inputLength - offset) + '" bytes remain');
       }
       var rPadding = paramBytes - rLength, sPadding = paramBytes - sLength;
-      var dst = Buffer4.allocUnsafe(rPadding + rLength + sPadding + sLength);
+      var dst = Buffer5.allocUnsafe(rPadding + rLength + sPadding + sLength);
       for (offset = 0; offset < rPadding; ++offset) {
         dst[offset] = 0;
       }
@@ -11680,7 +11680,7 @@ var require_ecdsa_sig_formatter = __commonJS({
       var sLength = paramBytes - sPadding;
       var rsBytes = 1 + 1 + rLength + 1 + 1 + sLength;
       var shortLength = rsBytes < MAX_OCTET;
-      var dst = Buffer4.allocUnsafe((shortLength ? 2 : 3) + rsBytes);
+      var dst = Buffer5.allocUnsafe((shortLength ? 2 : 3) + rsBytes);
       var offset = 0;
       dst[offset++] = ENCODED_TAG_SEQ;
       if (shortLength) {
@@ -11933,8 +11933,8 @@ var require_shared2 = __commonJS({
     exports.pkg = pkg;
     var PRODUCT_NAME = "google-api-nodejs-client";
     exports.PRODUCT_NAME = PRODUCT_NAME;
-    var USER_AGENT = `${PRODUCT_NAME}/${pkg.version}`;
-    exports.USER_AGENT = USER_AGENT;
+    var USER_AGENT2 = `${PRODUCT_NAME}/${pkg.version}`;
+    exports.USER_AGENT = USER_AGENT2;
   }
 });
 
@@ -13124,7 +13124,7 @@ var require_envDetect = __commonJS({
 // node_modules/jws/lib/data-stream.js
 var require_data_stream = __commonJS({
   "node_modules/jws/lib/data-stream.js"(exports, module) {
-    var Buffer4 = require_safe_buffer().Buffer;
+    var Buffer5 = require_safe_buffer().Buffer;
     var Stream5 = __require("stream");
     var util = __require("util");
     function DataStream(data) {
@@ -13132,11 +13132,11 @@ var require_data_stream = __commonJS({
       this.writable = true;
       this.readable = true;
       if (!data) {
-        this.buffer = Buffer4.alloc(0);
+        this.buffer = Buffer5.alloc(0);
         return this;
       }
       if (typeof data.pipe === "function") {
-        this.buffer = Buffer4.alloc(0);
+        this.buffer = Buffer5.alloc(0);
         data.pipe(this);
         return this;
       }
@@ -13154,7 +13154,7 @@ var require_data_stream = __commonJS({
     }
     util.inherits(DataStream, Stream5);
     DataStream.prototype.write = function write(data) {
-      this.buffer = Buffer4.concat([this.buffer, Buffer4.from(data)]);
+      this.buffer = Buffer5.concat([this.buffer, Buffer5.from(data)]);
       this.emit("data", data);
     };
     DataStream.prototype.end = function end(data) {
@@ -13173,11 +13173,11 @@ var require_data_stream = __commonJS({
 var require_buffer_equal_constant_time = __commonJS({
   "node_modules/buffer-equal-constant-time/index.js"(exports, module) {
     "use strict";
-    var Buffer4 = __require("buffer").Buffer;
+    var Buffer5 = __require("buffer").Buffer;
     var SlowBuffer = __require("buffer").SlowBuffer;
     module.exports = bufferEq;
     function bufferEq(a, b) {
-      if (!Buffer4.isBuffer(a) || !Buffer4.isBuffer(b)) {
+      if (!Buffer5.isBuffer(a) || !Buffer5.isBuffer(b)) {
         return false;
       }
       if (a.length !== b.length) {
@@ -13190,14 +13190,14 @@ var require_buffer_equal_constant_time = __commonJS({
       return c === 0;
     }
     bufferEq.install = function() {
-      Buffer4.prototype.equal = SlowBuffer.prototype.equal = function equal(that) {
+      Buffer5.prototype.equal = SlowBuffer.prototype.equal = function equal(that) {
         return bufferEq(this, that);
       };
     };
-    var origBufEqual = Buffer4.prototype.equal;
+    var origBufEqual = Buffer5.prototype.equal;
     var origSlowBufEqual = SlowBuffer.prototype.equal;
     bufferEq.restore = function() {
-      Buffer4.prototype.equal = origBufEqual;
+      Buffer5.prototype.equal = origBufEqual;
       SlowBuffer.prototype.equal = origSlowBufEqual;
     };
   }
@@ -13206,7 +13206,7 @@ var require_buffer_equal_constant_time = __commonJS({
 // node_modules/jwa/index.js
 var require_jwa = __commonJS({
   "node_modules/jwa/index.js"(exports, module) {
-    var Buffer4 = require_safe_buffer().Buffer;
+    var Buffer5 = require_safe_buffer().Buffer;
     var crypto2 = __require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util = __require("util");
@@ -13220,7 +13220,7 @@ var require_jwa = __commonJS({
       MSG_INVALID_SECRET += "or a KeyObject";
     }
     function checkIsPublicKey(key) {
-      if (Buffer4.isBuffer(key)) {
+      if (Buffer5.isBuffer(key)) {
         return;
       }
       if (typeof key === "string") {
@@ -13243,7 +13243,7 @@ var require_jwa = __commonJS({
       }
     }
     function checkIsPrivateKey(key) {
-      if (Buffer4.isBuffer(key)) {
+      if (Buffer5.isBuffer(key)) {
         return;
       }
       if (typeof key === "string") {
@@ -13255,7 +13255,7 @@ var require_jwa = __commonJS({
       throw typeError(MSG_INVALID_SIGNER_KEY);
     }
     function checkIsSecretKey(key) {
-      if (Buffer4.isBuffer(key)) {
+      if (Buffer5.isBuffer(key)) {
         return;
       }
       if (typeof key === "string") {
@@ -13293,7 +13293,7 @@ var require_jwa = __commonJS({
       return new TypeError(errMsg);
     }
     function bufferOrString(obj) {
-      return Buffer4.isBuffer(obj) || typeof obj === "string";
+      return Buffer5.isBuffer(obj) || typeof obj === "string";
     }
     function normalizeInput(thing) {
       if (!bufferOrString(thing))
@@ -13324,7 +13324,7 @@ var require_jwa = __commonJS({
     function createHmacVerifier(bits) {
       return function verify(thing, signature, secret) {
         var computedSig = createHmacSigner(bits)(thing, secret);
-        return timingSafeEqual(Buffer4.from(signature), Buffer4.from(computedSig));
+        return timingSafeEqual(Buffer5.from(signature), Buffer5.from(computedSig));
       };
     }
     function createKeySigner(bits) {
@@ -13430,11 +13430,11 @@ var require_jwa = __commonJS({
 // node_modules/jws/lib/tostring.js
 var require_tostring = __commonJS({
   "node_modules/jws/lib/tostring.js"(exports, module) {
-    var Buffer4 = __require("buffer").Buffer;
+    var Buffer5 = __require("buffer").Buffer;
     module.exports = function toString(obj) {
       if (typeof obj === "string")
         return obj;
-      if (typeof obj === "number" || Buffer4.isBuffer(obj))
+      if (typeof obj === "number" || Buffer5.isBuffer(obj))
         return obj.toString();
       return JSON.stringify(obj);
     };
@@ -13444,14 +13444,14 @@ var require_tostring = __commonJS({
 // node_modules/jws/lib/sign-stream.js
 var require_sign_stream = __commonJS({
   "node_modules/jws/lib/sign-stream.js"(exports, module) {
-    var Buffer4 = require_safe_buffer().Buffer;
+    var Buffer5 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
     var Stream5 = __require("stream");
     var toString = require_tostring();
     var util = __require("util");
     function base64url3(string4, encoding) {
-      return Buffer4.from(string4, encoding).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+      return Buffer5.from(string4, encoding).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
     }
     function jwsSecuredInput(header, payload, encoding) {
       encoding = encoding || "utf8";
@@ -13519,7 +13519,7 @@ var require_sign_stream = __commonJS({
 // node_modules/jws/lib/verify-stream.js
 var require_verify_stream = __commonJS({
   "node_modules/jws/lib/verify-stream.js"(exports, module) {
-    var Buffer4 = require_safe_buffer().Buffer;
+    var Buffer5 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
     var Stream5 = __require("stream");
@@ -13540,7 +13540,7 @@ var require_verify_stream = __commonJS({
     }
     function headerFromJWS(jwsSig) {
       var encodedHeader = jwsSig.split(".", 1)[0];
-      return safeJsonParse(Buffer4.from(encodedHeader, "base64").toString("binary"));
+      return safeJsonParse(Buffer5.from(encodedHeader, "base64").toString("binary"));
     }
     function securedInputFromJWS(jwsSig) {
       return jwsSig.split(".", 2).join(".");
@@ -13551,7 +13551,7 @@ var require_verify_stream = __commonJS({
     function payloadFromJWS(jwsSig, encoding) {
       encoding = encoding || "utf8";
       var payload = jwsSig.split(".")[1];
-      return Buffer4.from(payload, "base64").toString(encoding);
+      return Buffer5.from(payload, "base64").toString(encoding);
     }
     function isValidJws(string4) {
       return JWS_REGEX.test(string4) && !!headerFromJWS(string4);
@@ -21907,6 +21907,280 @@ var require_websocket_server = __commonJS({
 
 // build/cli.js
 import { parseArgs } from "node:util";
+
+// build/atlas-client.js
+import { Buffer as Buffer2 } from "node:buffer";
+
+// build/types.js
+var ASPECT_RATIOS = [
+  "1:1",
+  "2:3",
+  "3:2",
+  "3:4",
+  "4:3",
+  "16:9",
+  "9:16"
+];
+var IMAGE_BACKGROUNDS = ["auto", "transparent", "opaque"];
+var IMAGE_OUTPUT_FORMATS = ["png", "jpeg", "webp"];
+var ALPHA_CAPABLE_OUTPUT_FORMATS = [
+  "png",
+  "webp"
+];
+var FALLBACK_IMAGE_MODELS = [
+  "gemini-3-pro-image-preview",
+  "gemini-2.5-flash-image"
+];
+var FALLBACK_OPENAI_IMAGE_MODELS = ["gpt-image-2"];
+var FALLBACK_ATLAS_IMAGE_MODELS = [
+  "google/nano-banana-2-lite/text-to-image-developer"
+];
+var DEFAULT_REQUEST_TIMEOUT_MS = 6e4;
+var DEFAULT_LOG_LEVEL = "info";
+
+// build/atlas-client.js
+var DEFAULT_API_BASE = "https://api.atlascloud.ai";
+var USER_AGENT = "media-pipeline-mcp/atlas-provider";
+var MAX_JSON_BYTES = 1024 * 1024;
+var MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+var MAX_PREDICTION_RETRIES = 3;
+var POLL_INTERVAL_MS = 2e3;
+var PENDING_STATUSES = /* @__PURE__ */ new Set(["created", "starting", "processing"]);
+var AtlasRequestError = class extends Error {
+  status;
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+};
+function defaultSleep(milliseconds) {
+  return new Promise((resolve3) => setTimeout(resolve3, milliseconds));
+}
+function normalizeApiBase(value) {
+  const parsed = new URL(value);
+  if (parsed.protocol !== "https:") {
+    throw new Error("Atlas Cloud API base must use HTTPS.");
+  }
+  parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+  parsed.search = "";
+  parsed.hash = "";
+  return parsed.toString().replace(/\/$/, "");
+}
+async function readJson(response) {
+  const body = await response.text();
+  if (Buffer2.byteLength(body, "utf8") > MAX_JSON_BYTES) {
+    throw new AtlasRequestError("Atlas Cloud returned an oversized JSON response.");
+  }
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    throw new AtlasRequestError("Atlas Cloud returned invalid JSON.", response.status);
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new AtlasRequestError("Atlas Cloud returned an invalid response object.");
+  }
+  return payload;
+}
+function errorMessage(payload, fallback) {
+  return typeof payload.message === "string" && payload.message.trim() ? payload.message.trim() : fallback;
+}
+async function predictionData(response) {
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new AtlasRequestError(errorMessage(payload, `HTTP ${response.status}`), response.status);
+  }
+  if (payload.code !== void 0 && payload.code !== 0 && payload.code !== 200) {
+    throw new AtlasRequestError(errorMessage(payload, "Atlas Cloud API error."));
+  }
+  if (!payload.data || typeof payload.data !== "object" || Array.isArray(payload.data)) {
+    throw new AtlasRequestError("Atlas Cloud response did not contain prediction data.");
+  }
+  return payload.data;
+}
+function predictionId(data) {
+  if (typeof data.id !== "string" || !data.id) {
+    throw new AtlasRequestError("Atlas Cloud response did not contain a prediction ID.");
+  }
+  return data.id;
+}
+function completedOutput(data) {
+  const status = data.status;
+  if (status === "completed") {
+    if (!Array.isArray(data.outputs) || data.outputs.length === 0 || typeof data.outputs[0] !== "string") {
+      throw new AtlasRequestError("Completed Atlas Cloud prediction did not contain an output URL.");
+    }
+    return data.outputs[0];
+  }
+  if (status === "failed" || status === "timeout") {
+    const detail = typeof data.error === "string" && data.error ? data.error : `prediction ${status}`;
+    throw new AtlasRequestError(`Atlas Cloud generation failed: ${detail}`);
+  }
+  if (typeof status !== "string" || !PENDING_STATUSES.has(status)) {
+    throw new AtlasRequestError(`Atlas Cloud returned an unknown prediction status: ${String(status)}`);
+  }
+  return void 0;
+}
+function isTransientStatus(status) {
+  return status === 429 || status >= 500;
+}
+function mimeTypeForResponse(response) {
+  const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim();
+  return contentType?.startsWith("image/") ? contentType : "image/png";
+}
+async function fetchAtlasImageModels(_apiKey, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, fetchImpl = fetch) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(`${DEFAULT_API_BASE}/api/v1/models`, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: controller.signal
+    });
+    const payload = await readJson(response);
+    if (!response.ok) {
+      throw new AtlasRequestError(errorMessage(payload, `HTTP ${response.status}`), response.status);
+    }
+    if (!Array.isArray(payload.data)) {
+      throw new AtlasRequestError("Atlas Cloud model catalog did not contain a list.");
+    }
+    return payload.data.filter((item) => item.type === "Image" && item.display_console === true && Array.isArray(item.categories) && item.categories.includes("TEXT-TO-IMAGE") && typeof item.model === "string").map((item) => item.model).sort((left, right) => left.localeCompare(right));
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+var AtlasImageClient = class {
+  config;
+  fetchImpl;
+  sleep;
+  apiBase;
+  constructor(config2, options = {}) {
+    this.config = config2;
+    this.fetchImpl = options.fetch ?? fetch;
+    this.sleep = options.sleep ?? defaultSleep;
+    this.apiBase = normalizeApiBase(options.apiBase ?? DEFAULT_API_BASE);
+  }
+  async generateImage(input) {
+    const unsupportedOptions = [
+      input.referenceImages?.length ? "referenceImages" : void 0,
+      input.mask ? "mask" : void 0,
+      input.background ? "background" : void 0,
+      input.outputFormat ? "outputFormat" : void 0
+    ].filter((option) => option !== void 0);
+    if (unsupportedOptions.length > 0) {
+      return {
+        success: false,
+        errorCode: "UNSUPPORTED_BY_PROVIDER",
+        error: `${unsupportedOptions.join(", ")} ${unsupportedOptions.length === 1 ? "is" : "are"} not supported by Atlas Cloud text-to-image models.`
+      };
+    }
+    const timeoutMs = input.timeoutMs || this.config.requestTimeoutMs;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const deadline = Date.now() + timeoutMs;
+    try {
+      const model = input.model || this.config.defaultModel;
+      const response = await this.fetchImpl(`${this.apiBase}/api/v1/model/generateImage`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.apiKey}`,
+          "Content-Type": "application/json",
+          "User-Agent": USER_AGENT
+        },
+        body: JSON.stringify({
+          model,
+          prompt: input.prompt,
+          aspect_ratio: input.aspectRatio || "1:1",
+          thinking_level: "default",
+          resolution: "1k",
+          enable_sync_mode: false,
+          enable_base64_output: false
+        }),
+        signal: controller.signal
+      });
+      let data = await predictionData(response);
+      const id = predictionId(data);
+      let outputUrl = completedOutput(data);
+      while (!outputUrl && Date.now() < deadline) {
+        data = await this.fetchPrediction(id, controller.signal);
+        outputUrl = completedOutput(data);
+        if (!outputUrl) {
+          await this.sleep(Math.min(POLL_INTERVAL_MS, Math.max(0, deadline - Date.now())));
+        }
+      }
+      if (!outputUrl) {
+        throw new AtlasRequestError(`Image generation timed out after ${timeoutMs}ms.`);
+      }
+      const output = new URL(outputUrl);
+      if (output.protocol !== "https:") {
+        throw new AtlasRequestError("Atlas Cloud returned a non-HTTPS output URL.");
+      }
+      const imageResponse = await this.fetchImpl(output, {
+        headers: {
+          Accept: "image/*",
+          "User-Agent": USER_AGENT
+        },
+        signal: controller.signal
+      });
+      if (!imageResponse.ok) {
+        throw new AtlasRequestError(`Atlas Cloud image download failed with HTTP ${imageResponse.status}.`, imageResponse.status);
+      }
+      const contentLength = Number(imageResponse.headers.get("content-length"));
+      if (Number.isFinite(contentLength) && contentLength > MAX_IMAGE_BYTES) {
+        throw new AtlasRequestError("Atlas Cloud image exceeds the 50MB limit.");
+      }
+      const image = Buffer2.from(await imageResponse.arrayBuffer());
+      if (image.length === 0) {
+        throw new AtlasRequestError("Atlas Cloud returned an empty image.");
+      }
+      if (image.length > MAX_IMAGE_BYTES) {
+        throw new AtlasRequestError("Atlas Cloud image exceeds the 50MB limit.");
+      }
+      return {
+        success: true,
+        base64Data: image.toString("base64"),
+        mimeType: mimeTypeForResponse(imageResponse)
+      };
+    } catch (error51) {
+      const internalError = error51 instanceof Error ? error51.message : String(error51);
+      if (controller.signal.aborted) {
+        return {
+          success: false,
+          errorCode: "REQUEST_TIMEOUT",
+          error: `Image generation timed out after ${timeoutMs}ms.`,
+          internalError
+        };
+      }
+      const status = error51 instanceof AtlasRequestError ? error51.status : void 0;
+      return {
+        success: false,
+        errorCode: "ATLAS_API_ERROR",
+        error: typeof status === "number" && status >= 400 && status < 500 ? `Atlas Cloud rejected the request: ${internalError}` : "Atlas Cloud image generation failed.",
+        internalError
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+  async fetchPrediction(predictionIdValue, signal) {
+    for (let attempt = 0; attempt <= MAX_PREDICTION_RETRIES; attempt += 1) {
+      const response = await this.fetchImpl(`${this.apiBase}/api/v1/model/prediction/${encodeURIComponent(predictionIdValue)}`, {
+        headers: {
+          Authorization: `Bearer ${this.config.apiKey}`,
+          "User-Agent": USER_AGENT
+        },
+        signal
+      });
+      if (response.ok || !isTransientStatus(response.status)) {
+        return predictionData(response);
+      }
+      if (attempt === MAX_PREDICTION_RETRIES) {
+        return predictionData(response);
+      }
+      await this.sleep(1e3 * 2 ** attempt);
+    }
+    throw new AtlasRequestError("Atlas Cloud prediction request exhausted retries.");
+  }
+};
 
 // node_modules/@google/genai/dist/node/index.mjs
 var import_google_auth_library = __toESM(require_src6(), 1);
@@ -31919,10 +32193,10 @@ var ApiClient = class {
               const errorJson = JSON.parse(JSON.stringify(chunkJson["error"]));
               const status = errorJson["status"];
               const code = errorJson["code"];
-              const errorMessage = `got status: ${status}. ${JSON.stringify(chunkJson)}`;
+              const errorMessage2 = `got status: ${status}. ${JSON.stringify(chunkJson)}`;
               if (code >= 400 && code < 600) {
                 const apiError = new ApiError({
-                  message: errorMessage,
+                  message: errorMessage2,
                   status: code
                 });
                 throw apiError;
@@ -32133,15 +32407,15 @@ async function throwErrorIfNotOK(response) {
         }
       };
     }
-    const errorMessage = JSON.stringify(errorBody);
+    const errorMessage2 = JSON.stringify(errorBody);
     if (status >= 400 && status < 600) {
       const apiError = new ApiError({
-        message: errorMessage,
+        message: errorMessage2,
         status
       });
       throw apiError;
     }
-    throw new Error(errorMessage);
+    throw new Error(errorMessage2);
   }
 }
 function includeExtraBodyToRequestInit(requestInit, extraBody) {
@@ -38490,30 +38764,6 @@ function getApiKeyFromEnv() {
   return envGoogleApiKey || envGeminiApiKey || void 0;
 }
 
-// build/types.js
-var ASPECT_RATIOS = [
-  "1:1",
-  "2:3",
-  "3:2",
-  "3:4",
-  "4:3",
-  "16:9",
-  "9:16"
-];
-var IMAGE_BACKGROUNDS = ["auto", "transparent", "opaque"];
-var IMAGE_OUTPUT_FORMATS = ["png", "jpeg", "webp"];
-var ALPHA_CAPABLE_OUTPUT_FORMATS = [
-  "png",
-  "webp"
-];
-var FALLBACK_IMAGE_MODELS = [
-  "gemini-3-pro-image-preview",
-  "gemini-2.5-flash-image"
-];
-var FALLBACK_OPENAI_IMAGE_MODELS = ["gpt-image-2"];
-var DEFAULT_REQUEST_TIMEOUT_MS = 6e4;
-var DEFAULT_LOG_LEVEL = "info";
-
 // build/gemini-client.js
 async function fetchImageModels(apiKey, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const ai = new GoogleGenAI({ apiKey });
@@ -38628,12 +38878,12 @@ var GeminiImageClient = class {
         error: "Gemini did not return a generated image."
       };
     } catch (error51) {
-      const errorMessage = error51 instanceof Error ? error51.message : String(error51);
+      const errorMessage2 = error51 instanceof Error ? error51.message : String(error51);
       return {
         success: false,
         errorCode: controller.signal.aborted ? "REQUEST_TIMEOUT" : "GEMINI_API_ERROR",
         error: controller.signal.aborted ? `Image generation timed out after ${timeoutMs}ms.` : "Gemini image generation failed.",
-        internalError: errorMessage
+        internalError: errorMessage2
       };
     } finally {
       clearTimeout(timeoutId);
@@ -49860,20 +50110,20 @@ var ImageStorage = class _ImageStorage {
         filePath
       };
     } catch (error51) {
-      const errorMessage = error51 instanceof Error ? error51.message : String(error51);
-      if (errorMessage === _ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE) {
+      const errorMessage2 = error51 instanceof Error ? error51.message : String(error51);
+      if (errorMessage2 === _ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE) {
         return {
           success: false,
           errorCode: "OUTPUT_PATH_NOT_ALLOWED",
           error: _ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE,
-          internalError: errorMessage
+          internalError: errorMessage2
         };
       }
       return {
         success: false,
         errorCode: "FILE_SAVE_FAILED",
         error: "Failed to save generated image.",
-        internalError: errorMessage
+        internalError: errorMessage2
       };
     }
   }
@@ -49996,10 +50246,13 @@ function resolveDefaultModel(availableModels, configuredDefaultModel) {
   }
   return availableModels[0] || configuredDefaultModel;
 }
-function parseImageProvider(value, geminiApiKey, openaiApiKey) {
+function parseImageProvider(value, geminiApiKey, openaiApiKey, atlasApiKey = "") {
   const normalized = value?.trim().toLowerCase();
-  if (normalized === "gemini" || normalized === "openai") {
+  if (normalized === "gemini" || normalized === "openai" || normalized === "atlas") {
     return normalized;
+  }
+  if (!geminiApiKey && !openaiApiKey && atlasApiKey) {
+    return "atlas";
   }
   if (!geminiApiKey && openaiApiKey) {
     return "openai";
@@ -50007,17 +50260,20 @@ function parseImageProvider(value, geminiApiKey, openaiApiKey) {
   return "gemini";
 }
 function hasAnyApiKey(config2) {
-  return Boolean(config2.geminiApiKey || config2.openaiApiKey);
+  return Boolean(config2.geminiApiKey || config2.openaiApiKey || config2.atlasApiKey);
 }
 function createRuntimeConfig(env = process.env) {
   const geminiApiKey = env.GEMINI_API_KEY?.trim() ?? "";
   const openaiApiKey = env.OPENAI_API_KEY?.trim() ?? "";
+  const atlasApiKey = env.ATLASCLOUD_API_KEY?.trim() ?? env.ATLAS_CLOUD_API_KEY?.trim() ?? "";
   return {
     geminiApiKey,
     openaiApiKey,
+    atlasApiKey,
     geminiDefaultModel: env.GEMINI_DEFAULT_MODEL?.trim() || FALLBACK_IMAGE_MODELS[0],
     openaiDefaultModel: env.OPENAI_DEFAULT_MODEL?.trim() || FALLBACK_OPENAI_IMAGE_MODELS[0],
-    defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey),
+    atlasDefaultModel: env.ATLASCLOUD_DEFAULT_MODEL?.trim() || FALLBACK_ATLAS_IMAGE_MODELS[0],
+    defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey, atlasApiKey),
     outputDirectory: resolveOutputDirectory(env.IMAGE_OUTPUT_DIR),
     requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
     logLevel: parseLogLevel3(env.MEDIA_PIPELINE_LOG_LEVEL)
@@ -50202,13 +50458,24 @@ import { pathToFileURL } from "node:url";
 var OPENAI_MODEL_PREFIXES = ["gpt-image", "dall-e"];
 function resolveProviderForModel(model) {
   const normalized = model.trim().toLowerCase();
-  return OPENAI_MODEL_PREFIXES.some((prefix) => normalized.startsWith(prefix)) ? "openai" : "gemini";
+  if (OPENAI_MODEL_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
+    return "openai";
+  }
+  return normalized.includes("/") ? "atlas" : "gemini";
 }
 function getDefaultModelForProvider(config2, provider) {
-  return provider === "openai" ? config2.openaiDefaultModel : config2.geminiDefaultModel;
+  if (provider === "openai")
+    return config2.openaiDefaultModel;
+  if (provider === "atlas")
+    return config2.atlasDefaultModel;
+  return config2.geminiDefaultModel;
 }
 function getApiKeyEnvVarForProvider(provider) {
-  return provider === "openai" ? "OPENAI_API_KEY" : "GEMINI_API_KEY";
+  if (provider === "openai")
+    return "OPENAI_API_KEY";
+  if (provider === "atlas")
+    return "ATLASCLOUD_API_KEY";
+  return "GEMINI_API_KEY";
 }
 
 // build/media-pipeline-service.js
@@ -50219,6 +50486,7 @@ var MediaPipelineService = class {
   clients;
   fetchGeminiModels;
   fetchOpenAIModels;
+  fetchAtlasModels;
   imageStorage;
   cachedModelContext = null;
   constructor(config2, logger, modelCacheTtlMs = 15 * 60 * 1e3, overrides) {
@@ -50239,9 +50507,17 @@ var MediaPipelineService = class {
         requestTimeoutMs: config2.requestTimeoutMs
       });
     }
+    if (config2.atlasApiKey) {
+      clients.atlas = new AtlasImageClient({
+        apiKey: config2.atlasApiKey,
+        defaultModel: config2.atlasDefaultModel,
+        requestTimeoutMs: config2.requestTimeoutMs
+      });
+    }
     this.clients = { ...clients, ...overrides?.clients };
     this.fetchGeminiModels = overrides?.fetchGeminiModels ?? fetchImageModels;
     this.fetchOpenAIModels = overrides?.fetchOpenAIModels ?? fetchOpenAIImageModels;
+    this.fetchAtlasModels = overrides?.fetchAtlasModels ?? fetchAtlasImageModels;
     this.imageStorage = new ImageStorage(config2.outputDirectory);
   }
   getOutputDirectory() {
@@ -50261,10 +50537,10 @@ var MediaPipelineService = class {
       }
       return { models: discoveredModels, warnings };
     } catch (error51) {
-      const errorMessage = formatErrorMessage(error51);
+      const errorMessage2 = formatErrorMessage(error51);
       this.logger.warn("Failed to refresh image model list; using fallback defaults", {
         provider: "gemini",
-        error: errorMessage
+        error: errorMessage2
       });
       warnings.push("Gemini model discovery failed; using fallback defaults.");
       return {
@@ -50292,13 +50568,41 @@ var MediaPipelineService = class {
       }
       return { models: discoveredModels, warnings };
     } catch (error51) {
-      const errorMessage = formatErrorMessage(error51);
+      const errorMessage2 = formatErrorMessage(error51);
       this.logger.warn("Failed to refresh image model list; using fallback defaults", {
         provider: "openai",
-        error: errorMessage
+        error: errorMessage2
       });
       warnings.push("OpenAI model discovery failed; using fallback defaults.");
       return { models: this.getOpenAIFallbackModels(), warnings };
+    }
+  }
+  getAtlasFallbackModels() {
+    return [
+      .../* @__PURE__ */ new Set([
+        this.config.atlasDefaultModel,
+        ...FALLBACK_ATLAS_IMAGE_MODELS
+      ])
+    ];
+  }
+  async discoverAtlasModels() {
+    const warnings = [];
+    try {
+      this.logger.debug("Refreshing image model list from Atlas Cloud API");
+      const discoveredModels = await this.fetchAtlasModels(this.config.atlasApiKey, this.config.requestTimeoutMs);
+      if (discoveredModels.length === 0) {
+        warnings.push("Atlas Cloud model discovery returned no text-to-image models; using fallback defaults.");
+        return { models: this.getAtlasFallbackModels(), warnings };
+      }
+      return { models: discoveredModels, warnings };
+    } catch (error51) {
+      const errorMessage2 = formatErrorMessage(error51);
+      this.logger.warn("Failed to refresh Atlas Cloud model list; using fallback defaults", {
+        provider: "atlas",
+        error: errorMessage2
+      });
+      warnings.push("Atlas Cloud model discovery failed; using fallback defaults.");
+      return { models: this.getAtlasFallbackModels(), warnings };
     }
   }
   async getModelContext() {
@@ -50318,10 +50622,16 @@ var MediaPipelineService = class {
       modelsByProvider.openai = discovery.models;
       warnings.push(...discovery.warnings);
     }
+    if (this.config.atlasApiKey) {
+      const discovery = await this.discoverAtlasModels();
+      modelsByProvider.atlas = discovery.models;
+      warnings.push(...discovery.warnings);
+    }
     const availableModels = [
       .../* @__PURE__ */ new Set([
         ...modelsByProvider.gemini ?? [],
-        ...modelsByProvider.openai ?? []
+        ...modelsByProvider.openai ?? [],
+        ...modelsByProvider.atlas ?? []
       ])
     ];
     const defaultProvider = this.config.defaultProvider;
@@ -65035,7 +65345,7 @@ var createAssetArgsSchema = external_exports.strictObject({
   aspectRatio: external_exports.enum(ASPECT_RATIOS).optional().describe("Image aspect ratio (default: 1:1)"),
   background: external_exports.enum(IMAGE_BACKGROUNDS).optional().describe("Background handling; transparent requires an alpha-capable format. OpenAI models only"),
   outputFormat: external_exports.enum(IMAGE_OUTPUT_FORMATS).optional().describe("Encoding of the returned image. OpenAI models only"),
-  model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)")
+  model: external_exports.string().trim().min(1, "model cannot be empty").max(256, "model must be at most 256 characters long").optional().describe("Model to use for generation (gpt-image*/dall-e* route to OpenAI, namespaced provider/model IDs route to Atlas Cloud, others to Gemini)")
 });
 var createAssetInputSchema = {
   type: "object",
@@ -65059,7 +65369,7 @@ var createAssetInputSchema = {
     },
     mask: {
       type: "string",
-      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and OpenAI documents the mask as needing an alpha channel and matching dimensions. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit, and it is not fully opaque (an opaque mask marks nothing and is rejected before the request is sent). Not checked locally and left to the API: the dimension match, and whether a PNG carrying transparency in a tRNS chunk instead of an alpha channel is accepted \u2014 that case is sent with a warning. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+      description: "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and OpenAI documents the mask as needing an alpha channel and matching dimensions. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit, and it is not fully opaque (an opaque mask marks nothing and is rejected before the request is sent). Not checked locally and left to the API: the dimension match, and whether a PNG carrying transparency in a tRNS chunk instead of an alpha channel is accepted \u2014 that case is sent with a warning. OpenAI models only \u2014 Gemini and Atlas Cloud models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
       minLength: 1,
       maxLength: 1024
     },
@@ -65077,16 +65387,16 @@ var createAssetInputSchema = {
     background: {
       type: "string",
       enum: [...IMAGE_BACKGROUNDS],
-      description: 'Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only \u2014 Gemini models reject it. Verified: gpt-image-2 refuses transparent (400 "Transparent background is not supported for this model"), and that combination is rejected before the request is sent. Whether other models accept transparent, and whether any model accepts auto or opaque, has not been verified.'
+      description: 'Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only \u2014 Gemini and Atlas Cloud models reject it. Verified: gpt-image-2 refuses transparent (400 "Transparent background is not supported for this model"), and that combination is rejected before the request is sent. Whether other models accept transparent, and whether any model accepts auto or opaque, has not been verified.'
     },
     outputFormat: {
       type: "string",
       enum: [...IMAGE_OUTPUT_FORMATS],
-      description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only \u2014 Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned."
+      description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only \u2014 Gemini and Atlas Cloud models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned."
     },
     model: {
       type: "string",
-      description: "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
+      description: "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; namespaced provider/model IDs route to Atlas Cloud; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
       minLength: 1,
       maxLength: 256
     }
@@ -65124,7 +65434,7 @@ var createAssetOutputSchema = {
     },
     model: {
       type: "string",
-      description: "Model used for generation (Gemini or OpenAI)."
+      description: "Model used for generation (Gemini, OpenAI, or Atlas Cloud)."
     },
     outputDirectory: {
       type: "string",
@@ -65158,22 +65468,24 @@ Options:
   -p, --prompt <text>        Image description (required)
   -o, --output <path>        Output file path (optional, auto-generated if not provided)
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
-  -m, --model <model>        Model to use (gpt-image*/dall-e* \u2192 OpenAI, others \u2192 Gemini; validated dynamically)
+  -m, --model <model>        Model to use (gpt-image*/dall-e* \u2192 OpenAI, provider/model \u2192 Atlas Cloud, others \u2192 Gemini)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
       --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
   -b, --background <mode>    auto, transparent or opaque (OpenAI only)
   -f, --output-format <fmt>  png, jpeg or webp (OpenAI only)
   -d, --output-dir <dir>     Output directory (default: current directory)
-  -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
+  -t, --timeout-ms <ms>      Request timeout in milliseconds (all providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
   -h, --help                 Show this help message
 
 Environment:
   GEMINI_API_KEY             Your Gemini API key (at least one required)
   OPENAI_API_KEY             Your OpenAI API key (at least one required)
+  ATLASCLOUD_API_KEY         Your Atlas Cloud API key (at least one required)
   GEMINI_DEFAULT_MODEL       Preferred default model (optional)
   OPENAI_DEFAULT_MODEL       Preferred default OpenAI model (optional, default gpt-image-2)
-  IMAGE_PROVIDER             gemini or openai \u2014 provider used when --model is omitted (optional)
+  ATLASCLOUD_DEFAULT_MODEL   Preferred default Atlas Cloud model (optional)
+  IMAGE_PROVIDER             gemini, openai, or atlas \u2014 provider used when --model is omitted
   GEMINI_REQUEST_TIMEOUT_MS  Request timeout in milliseconds (optional)
   MEDIA_PIPELINE_LOG_LEVEL   Logging level for stderr diagnostics (optional)
 
@@ -65181,6 +65493,7 @@ Examples:
   node build/cli.bundle.js -p "A sunset over mountains" -o "./sunset.png"
   node build/cli.bundle.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
   node build/cli.bundle.js -p "Product photo" --model gpt-image-2 -o "./product.png"
+  node build/cli.bundle.js -p "Editorial landscape" --model google/nano-banana-2-lite/text-to-image-developer
   node build/cli.bundle.js -p "Logo variant" -r "./ref1.png,./ref2.png" -r "./ref3.png"
 `);
 }
@@ -65238,7 +65551,7 @@ async function main() {
       console.log(JSON.stringify({
         success: false,
         errorCode: "CONFIG_ERROR",
-        error: "No provider API key set: set GEMINI_API_KEY and/or OPENAI_API_KEY"
+        error: "No provider API key set: set GEMINI_API_KEY, OPENAI_API_KEY, and/or ATLASCLOUD_API_KEY"
       }));
       process.exit(1);
     }
@@ -65249,11 +65562,11 @@ async function main() {
       process.exit(1);
     }
   } catch (error51) {
-    const errorMessage = error51 instanceof Error ? error51.message : String(error51);
+    const errorMessage2 = error51 instanceof Error ? error51.message : String(error51);
     console.log(JSON.stringify({
       success: false,
       errorCode: "CLI_ERROR",
-      error: `CLI error: ${errorMessage}`
+      error: `CLI error: ${errorMessage2}`
     }));
     process.exit(1);
   }

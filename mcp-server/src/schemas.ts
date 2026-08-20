@@ -61,7 +61,7 @@ export const createAssetArgsSchema = z
       .max(256, "model must be at most 256 characters long")
       .optional()
       .describe(
-        "Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)"
+        "Model to use for generation (gpt-image*/dall-e* route to OpenAI, namespaced provider/model IDs route to Atlas Cloud, others to Gemini)"
       ),
   });
 
@@ -90,7 +90,7 @@ export const createAssetInputSchema = {
     mask: {
       type: "string",
       description:
-        "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and OpenAI documents the mask as needing an alpha channel and matching dimensions. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit, and it is not fully opaque (an opaque mask marks nothing and is rejected before the request is sent). Not checked locally and left to the API: the dimension match, and whether a PNG carrying transparency in a tRNS chunk instead of an alpha channel is accepted — that case is sent with a warning. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+        "Optional absolute path to a PNG mask. Transparent areas of the mask are the areas the model repaints; everything else is preserved from the base image. Requires referenceImages, and OpenAI documents the mask as needing an alpha channel and matching dimensions. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit, and it is not fully opaque (an opaque mask marks nothing and is rejected before the request is sent). Not checked locally and left to the API: the dimension match, and whether a PNG carrying transparency in a tRNS chunk instead of an alpha channel is accepted — that case is sent with a warning. OpenAI models only — Gemini and Atlas Cloud models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
       minLength: 1,
       maxLength: 1024,
     },
@@ -111,18 +111,18 @@ export const createAssetInputSchema = {
       type: "string",
       enum: [...IMAGE_BACKGROUNDS],
       description:
-        "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only — Gemini models reject it. Verified: gpt-image-2 refuses transparent (400 \"Transparent background is not supported for this model\"), and that combination is rejected before the request is sent. Whether other models accept transparent, and whether any model accepts auto or opaque, has not been verified.",
+        "Background handling for the generated image. Use transparent to get a cut-out subject with an alpha channel, which requires a png or webp outputFormat; when outputFormat is omitted, png is selected automatically. OpenAI models only — Gemini and Atlas Cloud models reject it. Verified: gpt-image-2 refuses transparent (400 \"Transparent background is not supported for this model\"), and that combination is rejected before the request is sent. Whether other models accept transparent, and whether any model accepts auto or opaque, has not been verified.",
     },
     outputFormat: {
       type: "string",
       enum: [...IMAGE_OUTPUT_FORMATS],
       description:
-        "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+        "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini and Atlas Cloud models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
     },
     model: {
       type: "string",
       description:
-        "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
+        "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; namespaced provider/model IDs route to Atlas Cloud; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
       minLength: 1,
       maxLength: 256,
     },
@@ -161,7 +161,7 @@ export const createAssetOutputSchema = {
     },
     model: {
       type: "string",
-      description: "Model used for generation (Gemini or OpenAI).",
+      description: "Model used for generation (Gemini, OpenAI, or Atlas Cloud).",
     },
     outputDirectory: {
       type: "string",

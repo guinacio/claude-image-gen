@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Standalone CLI for generating images using Google Gemini or OpenAI.
+ * Standalone CLI for generating images using Google Gemini, OpenAI, or Atlas Cloud.
  * This path does not require the MCP server or stdio transport.
  *
  * Usage:
@@ -19,22 +19,24 @@ Options:
   -p, --prompt <text>        Image description (required)
   -o, --output <path>        Output file path (optional, auto-generated if not provided)
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
-  -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
+  -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, provider/model → Atlas Cloud, others → Gemini)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
       --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
   -b, --background <mode>    auto, transparent or opaque (OpenAI only)
   -f, --output-format <fmt>  png, jpeg or webp (OpenAI only)
   -d, --output-dir <dir>     Output directory (default: current directory)
-  -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
+  -t, --timeout-ms <ms>      Request timeout in milliseconds (all providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
   -h, --help                 Show this help message
 
 Environment:
   GEMINI_API_KEY             Your Gemini API key (at least one required)
   OPENAI_API_KEY             Your OpenAI API key (at least one required)
+  ATLASCLOUD_API_KEY         Your Atlas Cloud API key (at least one required)
   GEMINI_DEFAULT_MODEL       Preferred default model (optional)
   OPENAI_DEFAULT_MODEL       Preferred default OpenAI model (optional, default gpt-image-2)
-  IMAGE_PROVIDER             gemini or openai — provider used when --model is omitted (optional)
+  ATLASCLOUD_DEFAULT_MODEL   Preferred default Atlas Cloud model (optional)
+  IMAGE_PROVIDER             gemini, openai, or atlas — provider used when --model is omitted
   GEMINI_REQUEST_TIMEOUT_MS  Request timeout in milliseconds (optional)
   MEDIA_PIPELINE_LOG_LEVEL   Logging level for stderr diagnostics (optional)
 
@@ -42,6 +44,7 @@ Examples:
   node build/cli.bundle.js -p "A sunset over mountains" -o "./sunset.png"
   node build/cli.bundle.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
   node build/cli.bundle.js -p "Product photo" --model gpt-image-2 -o "./product.png"
+  node build/cli.bundle.js -p "Editorial landscape" --model google/nano-banana-2-lite/text-to-image-developer
   node build/cli.bundle.js -p "Logo variant" -r "./ref1.png,./ref2.png" -r "./ref3.png"
 `);
 }
@@ -105,7 +108,7 @@ async function main() {
             console.log(JSON.stringify({
                 success: false,
                 errorCode: "CONFIG_ERROR",
-                error: "No provider API key set: set GEMINI_API_KEY and/or OPENAI_API_KEY",
+                error: "No provider API key set: set GEMINI_API_KEY, OPENAI_API_KEY, and/or ATLASCLOUD_API_KEY",
             }));
             process.exit(1);
         }

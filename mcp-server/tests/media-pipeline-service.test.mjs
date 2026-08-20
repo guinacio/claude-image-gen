@@ -149,17 +149,45 @@ test("createAsset routes OpenAI models to the OpenAI client", async () => {
   }
 });
 
-test("createAsset merges both providers into the available model list", async () => {
+test("createAsset routes namespaced models to the Atlas Cloud client", async () => {
+  const outputDirectory = createTempDirectory();
+  const atlasClient = createFakeClient();
+  const model = "google/nano-banana-2-lite/text-to-image-developer";
+
+  try {
+    const service = createService(
+      outputDirectory,
+      { ATLASCLOUD_API_KEY: "atlas-key", IMAGE_PROVIDER: "atlas" },
+      {
+        clients: { atlas: atlasClient },
+        fetchAtlasModels: async () => [model],
+      }
+    );
+
+    const response = await service.createAsset({ prompt: "a friendly robot", model });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(response.model, model);
+    assert.equal(atlasClient.calls.length, 1);
+    assert.equal(atlasClient.calls[0].model, model);
+    assert.ok(fs.existsSync(response.filePath));
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset merges all configured providers into the available model list", async () => {
   const outputDirectory = createTempDirectory();
 
   try {
     const service = createService(
       outputDirectory,
-      { GEMINI_API_KEY: "gemini-key", OPENAI_API_KEY: "openai-key" },
+      { GEMINI_API_KEY: "gemini-key", OPENAI_API_KEY: "openai-key", ATLASCLOUD_API_KEY: "atlas-key" },
       {
-        clients: { gemini: createFakeClient(), openai: createFakeClient() },
+        clients: { gemini: createFakeClient(), openai: createFakeClient(), atlas: createFakeClient() },
         fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
         fetchOpenAIModels: async () => ["gpt-image-2"],
+        fetchAtlasModels: async () => ["google/nano-banana-2-lite/text-to-image-developer"],
       }
     );
 
@@ -168,6 +196,7 @@ test("createAsset merges both providers into the available model list", async ()
     assert.deepEqual(modelContext.availableModels, [
       "gemini-3-pro-image-preview",
       "gpt-image-2",
+      "google/nano-banana-2-lite/text-to-image-developer",
     ]);
     assert.equal(modelContext.defaultModel, "gemini-3-pro-image-preview");
     assert.deepEqual(modelContext.warnings, []);
@@ -247,7 +276,7 @@ test("createAsset surfaces provider client warnings in the response", async () =
   }
 });
 
-test("createAsset still rejects unknown models across both providers", async () => {
+test("createAsset still rejects unknown models across configured providers", async () => {
   const outputDirectory = createTempDirectory();
 
   try {

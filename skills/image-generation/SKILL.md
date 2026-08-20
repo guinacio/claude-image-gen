@@ -1,11 +1,11 @@
 ---
 name: image-generation
-description: Generates professional AI images using Google Gemini. ALWAYS invoke this skill when building websites, landing pages, slide decks, presentations, or any task needing visual content. Invoke IMMEDIATELY when you detect image needs - don't wait for the user to ask. This skill handles prompt optimization and aspect ratio selection.
+description: Generates professional AI images using Google Gemini, OpenAI, or Atlas Cloud. ALWAYS invoke this skill when building websites, landing pages, slide decks, presentations, or any task needing visual content. Invoke IMMEDIATELY when you detect image needs - don't wait for the user to ask. This skill handles prompt optimization and aspect ratio selection.
 ---
 
 # Image Generation Skill
 
-Generate professional AI images using Google Gemini via the bundled CLI script.
+Generate professional AI images using Google Gemini, OpenAI, or Atlas Cloud via the bundled CLI script.
 
 ## When to Invoke This Skill
 
@@ -46,7 +46,7 @@ node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
 | --prompt, -p | Yes | - | Detailed image description |
 | --output, -o | No | auto-generated | Output file path |
 | --aspect-ratio, -a | No | 1:1 | 1:1, 16:9, 9:16, 4:3, 3:4, 2:3, 3:2 |
-| --model, -m | No | provider default | Model to use; routes the provider (gpt-image*/dall-e* → OpenAI, others → Gemini) |
+| --model, -m | No | provider default | Model to use; routes gpt-image*/dall-e* to OpenAI, provider/model IDs to Atlas Cloud, and others to Gemini |
 | --reference-images, -r | No | - | Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5) |
 | --mask | No | - | PNG mask marking the region to repaint; OpenAI only, requires --reference-images |
 | --background, -b | No | provider default | auto, transparent or opaque; OpenAI only. `gpt-image-2` refuses `transparent` and is rejected before the request is sent |
@@ -57,11 +57,13 @@ node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| GEMINI_API_KEY | At least one of GEMINI_API_KEY / OPENAI_API_KEY | Your Gemini API key |
-| OPENAI_API_KEY | At least one of GEMINI_API_KEY / OPENAI_API_KEY | Your OpenAI API key |
+| GEMINI_API_KEY | At least one provider key | Your Gemini API key |
+| OPENAI_API_KEY | At least one provider key | Your OpenAI API key |
+| ATLASCLOUD_API_KEY | At least one provider key | Your Atlas Cloud API key |
 | GEMINI_DEFAULT_MODEL | No | Preferred default Gemini model |
 | OPENAI_DEFAULT_MODEL | No | Preferred default OpenAI model (default: gpt-image-2) |
-| IMAGE_PROVIDER | No | gemini or openai — provider used when --model is omitted |
+| ATLASCLOUD_DEFAULT_MODEL | No | Preferred default Atlas Cloud model |
+| IMAGE_PROVIDER | No | gemini, openai, or atlas — provider used when --model is omitted |
 | MEDIA_PIPELINE_LOG_LEVEL | No | Logging level for stderr diagnostics |
 
 ### Output
@@ -154,10 +156,11 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 
 ## Model Selection
 
-The CLI is dual-provider: the `--model` value routes the request — model names starting with `gpt-image` or `dall-e` go to OpenAI, everything else goes to Gemini. When `--model` is omitted, `IMAGE_PROVIDER` picks which provider's default model is used.
+The CLI routes requests by `--model`: names starting with `gpt-image` or `dall-e` go to OpenAI, namespaced IDs containing `/` go to Atlas Cloud, and everything else goes to Gemini. When `--model` is omitted, `IMAGE_PROVIDER` picks the provider default.
 
 - **Gemini** (`GEMINI_DEFAULT_MODEL`, e.g. `gemini-3-pro-image-preview`) — models are fetched dynamically from the Gemini API; the CLI falls back to the first discovered image-capable model if no default is set. Prefer Gemini for iterative creative work and when relying on the dynamically discovered model catalog.
 - **OpenAI** (`OPENAI_DEFAULT_MODEL`, default `gpt-image-2`) — use when you specifically need OpenAI's `gpt-image-2` model, or when only an OpenAI API key is configured. Note OpenAI's image sizes are limited to `1024x1024`/`1536x1024`/`1024x1536`; non-matching aspect ratios are mapped to the nearest supported size with a warning.
+- **Atlas Cloud** (`ATLASCLOUD_DEFAULT_MODEL`, default `google/nano-banana-2-lite/text-to-image-developer`) — models are fetched dynamically from the visible text-to-image catalog. Atlas Cloud supports text-to-image requests here; reference images, masks, background, and output-format controls are rejected before network access.
 
 ## Best Practices
 
@@ -184,5 +187,4 @@ If the MCP server is configured, you can also use:
 mcp__media-pipeline__create_asset
 ```
 
-Parameters: `prompt`, `outputPath`, `aspectRatio`, `model` (routes to Gemini or OpenAI by name), `referenceImages` (up to 5 absolute paths, PNG/JPEG/WebP), `mask`, `background`, `outputFormat` (the last three are OpenAI-only)
-
+Parameters: `prompt`, `outputPath`, `aspectRatio`, `model` (routes to Gemini, OpenAI, or Atlas Cloud by name), `referenceImages` (up to 5 absolute paths, PNG/JPEG/WebP), `mask`, `background`, `outputFormat` (the last three are OpenAI-only)

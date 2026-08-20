@@ -7,7 +7,7 @@ import { registerCreateAssetTool } from "./server-handlers.js";
 const runtimeConfig = createRuntimeConfig();
 const logger = createLogger("server", runtimeConfig.logLevel);
 if (!hasAnyApiKey(runtimeConfig)) {
-    logger.error("At least one provider API key is required: set GEMINI_API_KEY and/or OPENAI_API_KEY");
+    logger.error("At least one provider API key is required: set GEMINI_API_KEY, OPENAI_API_KEY, and/or ATLASCLOUD_API_KEY");
     process.exit(1);
 }
 const mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
@@ -20,7 +20,7 @@ const mediaPipelineService = new MediaPipelineService(runtimeConfig, logger);
 function createServer() {
     const server = new McpServer({
         name: "media-pipeline",
-        version: "1.1.2",
+        version: "1.3.0",
     }, {
         capabilities: {
             tools: {},
@@ -66,6 +66,7 @@ function main() {
         defaultProvider: runtimeConfig.defaultProvider,
         geminiDefaultModel: runtimeConfig.geminiDefaultModel,
         openaiDefaultModel: runtimeConfig.openaiDefaultModel,
+        atlasDefaultModel: runtimeConfig.atlasDefaultModel,
         outputDirectory: mediaPipelineService.getOutputDirectory(),
         requestTimeoutMs: runtimeConfig.requestTimeoutMs,
     });

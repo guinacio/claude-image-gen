@@ -19,5 +19,8 @@ export const FALLBACK_IMAGE_MODELS = [
     "gemini-2.5-flash-image",
 ];
 export const FALLBACK_OPENAI_IMAGE_MODELS = ["gpt-image-2"];
+export const FALLBACK_ATLAS_IMAGE_MODELS = [
+    "google/nano-banana-2-lite/text-to-image-developer",
+];
 export const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 export const DEFAULT_LOG_LEVEL = "info";

@@ -8,6 +8,8 @@
         "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2}",
+        "ATLASCLOUD_API_KEY": "${ATLASCLOUD_API_KEY}",
+        "ATLASCLOUD_DEFAULT_MODEL": "${ATLASCLOUD_DEFAULT_MODEL:-google/nano-banana-2-lite/text-to-image-developer}",
         "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-gemini}",
         "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}"
       }

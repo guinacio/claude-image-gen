@@ -1,7 +1,7 @@
 {
   "name": "media-pipeline-mcp",
-  "version": "1.2.1",
-  "description": "MCP server for media asset processing with dual-provider image generation (Google Gemini + OpenAI)",
+  "version": "1.3.0",
+  "description": "MCP server for media asset processing with image generation through Google Gemini, OpenAI, or Atlas Cloud",
   "type": "module",
   "main": "build/bundle.js",
   "bin": {

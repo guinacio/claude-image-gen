@@ -8,7 +8,8 @@ export type ImageOutputFormat = (typeof IMAGE_OUTPUT_FORMATS)[number];
 export declare const ALPHA_CAPABLE_OUTPUT_FORMATS: readonly ImageOutputFormat[];
 export declare const FALLBACK_IMAGE_MODELS: readonly ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"];
 export declare const FALLBACK_OPENAI_IMAGE_MODELS: readonly ["gpt-image-2"];
-export type ImageProvider = "gemini" | "openai";
+export declare const FALLBACK_ATLAS_IMAGE_MODELS: readonly ["google/nano-banana-2-lite/text-to-image-developer"];
+export type ImageProvider = "gemini" | "openai" | "atlas";
 export declare const DEFAULT_REQUEST_TIMEOUT_MS = 60000;
 export declare const DEFAULT_LOG_LEVEL = "info";
 export type GeminiModel = string;
@@ -56,8 +57,10 @@ export interface GeminiConfig {
 export interface RuntimeConfig {
     geminiApiKey: string;
     openaiApiKey: string;
+    atlasApiKey: string;
     geminiDefaultModel: GeminiModel;
     openaiDefaultModel: string;
+    atlasDefaultModel: string;
     defaultProvider: ImageProvider;
     outputDirectory: string;
     requestTimeoutMs: number;

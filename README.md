@@ -1,24 +1,24 @@
 # AI Image Generation - Claude Skill + MCP
 
-AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integrated with Claude Code.
+AI-powered image generation using Google Gemini, OpenAI, or Atlas Cloud, integrated with Claude Code.
 
 ## Features
 
-- Generate images from text prompts using Google Gemini or OpenAI (gpt-image-2)
-- **Dual-provider support**: model name routes the request automatically (gpt-image*/dall-e* → OpenAI, everything else → Gemini)
+- Generate images from text prompts using Google Gemini, OpenAI, or Atlas Cloud
+- **Provider routing**: gpt-image*/dall-e* → OpenAI, namespaced provider/model IDs → Atlas Cloud, everything else → Gemini
 - Proactive Claude skill suggests images for websites, presentations, and more
 - Opt-in specialized workflows for narrower production pipelines, without adding them to every installation
 - **Two execution modes**: CLI script (skill-only) or MCP server (protocol-based)
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
-- Multiple model support (quality vs speed) across both providers
-- Optional reference images to guide generation (up to 5, PNG/JPEG/WebP) on both providers
+- Multiple model support (quality vs speed) across providers
+- Optional reference images to guide generation (up to 5, PNG/JPEG/WebP) on Gemini and OpenAI
 - Inpainting with a PNG mask, plus `background` and `outputFormat` control, on OpenAI models
 - Images saved to disk within the configured output directory, with file paths returned
 - MCP server speaks the MCP 2026-07-28 spec, with backward compatibility for older MCP clients
 
 ## Prerequisites
 
-- Google Gemini API key ([Get one here](https://aistudio.google.com/apikey)) and/or an OpenAI API key ([Get one here](https://platform.openai.com/api-keys)) — at least one is required
+- A Google Gemini API key ([Get one here](https://aistudio.google.com/apikey)), OpenAI API key ([Get one here](https://platform.openai.com/api-keys)), and/or Atlas Cloud API key ([Get one here](https://www.atlascloud.ai)) — at least one is required
 - Node.js 20+ (only for manual installation)
 
 ## Installation
@@ -58,7 +58,7 @@ For Claude Desktop users, install the pre-built extension:
 2. Open Claude Desktop
 3. Go to **Settings** → **Extensions** → **Advanced settings**
 4. Click **Install Extension** and select the `.mcpb` file
-5. Enter your Gemini and/or OpenAI API key when prompted (at least one is required)
+5. Enter at least one Gemini, OpenAI, or Atlas Cloud API key when prompted
 
 ---
 
@@ -83,7 +83,7 @@ GEMINI_API_KEY=your-api-key-here node build/cli.bundle.js \
   --aspect-ratio "16:9"
 ```
 
-The CLI routes to Gemini or OpenAI based on the model name and returns structured JSON on stdout. It does not require the MCP server layer.
+The CLI routes to Gemini, OpenAI, or Atlas Cloud based on the model name and returns structured JSON on stdout. It does not require the MCP server layer.
 Any custom output path must still remain inside the configured output directory.
 
 #### 3. Add to Claude Code
@@ -113,6 +113,8 @@ Add to your Claude Code config (`~/.claude.json`):
         "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2}",
+        "ATLASCLOUD_API_KEY": "${ATLASCLOUD_API_KEY}",
+        "ATLASCLOUD_DEFAULT_MODEL": "${ATLASCLOUD_DEFAULT_MODEL:-google/nano-banana-2-lite/text-to-image-developer}",
         "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-gemini}",
         "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}",
         "GEMINI_REQUEST_TIMEOUT_MS": "${GEMINI_REQUEST_TIMEOUT_MS:-60000}",
@@ -196,22 +198,24 @@ The skill will proactively suggest image generation when:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your Gemini API key |
+| `GEMINI_API_KEY` | At least one provider key | - | Your Gemini API key |
 | `GEMINI_DEFAULT_MODEL` | No | `gemini-3-pro-image-preview` | Default Gemini model to use |
-| `OPENAI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your OpenAI API key |
+| `OPENAI_API_KEY` | At least one provider key | - | Your OpenAI API key |
 | `OPENAI_DEFAULT_MODEL` | No | `gpt-image-2` | Default OpenAI model to use |
-| `IMAGE_PROVIDER` | No | `gemini` | Provider (`gemini` or `openai`) used when a request omits `model` |
+| `ATLASCLOUD_API_KEY` | At least one provider key | - | Your Atlas Cloud API key |
+| `ATLASCLOUD_DEFAULT_MODEL` | No | `google/nano-banana-2-lite/text-to-image-developer` | Default Atlas Cloud model to use |
+| `IMAGE_PROVIDER` | No | `gemini` | Provider (`gemini`, `openai`, or `atlas`) used when a request omits `model` |
 | `IMAGE_OUTPUT_DIR` | No | `~/generated-images` | Where to save images |
-| `GEMINI_REQUEST_TIMEOUT_MS` | No | `60000` | Request timeout, applies to both Gemini and OpenAI requests |
+| `GEMINI_REQUEST_TIMEOUT_MS` | No | `60000` | Request timeout for all providers |
 | `MEDIA_PIPELINE_LOG_LEVEL` | No | `info` | Stderr logging level |
 
 ### Providers
 
-The server is dual-provider: it routes each request to Google Gemini or OpenAI (`gpt-image-2`) automatically based on the `model` name — models starting with `gpt-image` or `dall-e` go to OpenAI, everything else goes to Gemini. When a request omits `model` entirely, `IMAGE_PROVIDER` selects which provider's default model is used.
+The server routes each request by model name: names starting with `gpt-image` or `dall-e` go to OpenAI, namespaced IDs containing `/` go to Atlas Cloud, and everything else goes to Gemini. When a request omits `model`, `IMAGE_PROVIDER` selects the default provider.
 
 - **Aspect ratios on OpenAI**: OpenAI image models only support `1024x1024`, `1536x1024`, and `1024x1536`. Requested aspect ratios are mapped to the nearest supported size, and if the mapping isn't exact the response includes a warning describing the substitution.
-- **Reference images**: supported on both providers — pass up to 5 reference image paths to guide generation.
-- **`mask`, `background`, `outputFormat`**: OpenAI models only — Gemini models reject them.
+- **Reference images**: supported on Gemini and OpenAI; Atlas Cloud text-to-image models reject them before any request is sent.
+- **`mask`, `background`, `outputFormat`**: OpenAI models only — Gemini and Atlas Cloud models reject them.
   - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages`, and [OpenAI documents](https://developers.openai.com/api/docs/guides/image-generation) the mask as needing an alpha channel and the same dimensions as the base image. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit (masks are capped well below reference images, whose limit here is 20MB), and it is not fully opaque — an opaque mask marks nothing, so it is rejected before the request is sent. Left to the API: the dimension match, and whether a PNG carrying transparency in a `tRNS` chunk instead of an alpha channel is accepted — that case is sent with a warning rather than blocked.
   - `background` (`auto`, `transparent`, `opaque`) chooses how the background is handled. `transparent` needs an alpha-capable `outputFormat`, so `png` is selected automatically when `outputFormat` is omitted. `gpt-image-2` rejects `transparent`, and that combination is refused before the request is sent.
   - `outputFormat` (`png`, `jpeg`, `webp`) sets the encoding of the returned image; `jpeg` cannot carry transparency.
@@ -220,7 +224,7 @@ The server is dual-provider: it routes each request to Google Gemini or OpenAI (
 
 ### Models
 
-Gemini models are fetched dynamically from the Gemini API at runtime; the CLI and MCP tool validate Gemini model choices against the current image-capable model list, and `GEMINI_DEFAULT_MODEL` is used when available. For OpenAI, `gpt-image-2` is the default model (`OPENAI_DEFAULT_MODEL`); any `gpt-image*`/`dall-e*` model name routes to OpenAI.
+Gemini and Atlas Cloud models are fetched dynamically at runtime and validated against their image-capable catalogs. `GEMINI_DEFAULT_MODEL`, `OPENAI_DEFAULT_MODEL`, and `ATLASCLOUD_DEFAULT_MODEL` configure each provider's default. Atlas Cloud generation uses one non-retried POST, bounded retries for transient prediction GETs, and downloads the completed HTTPS image output.
 
 ### Aspect Ratios
 
@@ -257,7 +261,7 @@ See [skills/image-generation/references/prompt-crafting.md](skills/image-generat
 
 **CLI Mode (Default)** - Used by the skill:
 ```
-Claude → Skill → Bash → bundled CLI → Gemini API / OpenAI API
+Claude → Skill → Bash → bundled CLI → Gemini API / OpenAI API / Atlas Cloud API
 ```
 - No MCP protocol overhead
 - Skill runs bundled CLI directly
@@ -265,7 +269,7 @@ Claude → Skill → Bash → bundled CLI → Gemini API / OpenAI API
 
 **MCP Mode (Optional)** - For direct tool calls:
 ```
-Claude → MCP Tool → bundled MCP server → Gemini API / OpenAI API
+Claude → MCP Tool → bundled MCP server → Gemini API / OpenAI API / Atlas Cloud API
 ```
 - Speaks the MCP 2026-07-28 spec, with backward-compatible fallback for older MCP clients
 - Useful for non-skill workflows
@@ -296,7 +300,7 @@ claude-image-gen/
 │   │   ├── cli.ts        # CLI entry point (skill uses this)
 │   │   ├── gemini-client.ts
 │   │   ├── openai-client.ts
-│   │   ├── provider.ts   # Routes requests to Gemini or OpenAI by model name
+│   │   ├── provider.ts   # Routes requests to Gemini, OpenAI, or Atlas Cloud by model name
 │   │   ├── image-storage.ts
 │   │   └── types.ts
 │   ├── build/

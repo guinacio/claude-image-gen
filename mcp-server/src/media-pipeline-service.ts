@@ -1,3 +1,4 @@
+import { AtlasImageClient, fetchAtlasImageModels } from "./atlas-client.js";
 import { GeminiImageClient, fetchImageModels } from "./gemini-client.js";
 import { OpenAIImageClient, fetchOpenAIImageModels } from "./openai-client.js";
 import { ImageStorage } from "./image-storage.js";
@@ -18,7 +19,10 @@ import {
   resolveDefaultModel,
 } from "./runtime.js";
 import type { Logger } from "./runtime.js";
-import { FALLBACK_OPENAI_IMAGE_MODELS } from "./types.js";
+import {
+  FALLBACK_ATLAS_IMAGE_MODELS,
+  FALLBACK_OPENAI_IMAGE_MODELS,
+} from "./types.js";
 import type {
   CreateAssetRequest,
   CreateAssetResponse,
@@ -40,6 +44,7 @@ export interface MediaPipelineServiceOverrides {
   clients?: Partial<Record<ImageProvider, ImageProviderClient>>;
   fetchGeminiModels?: ModelFetcher;
   fetchOpenAIModels?: ModelFetcher;
+  fetchAtlasModels?: ModelFetcher;
 }
 
 interface ProviderDiscovery {
@@ -51,6 +56,7 @@ export class MediaPipelineService {
   private readonly clients: Partial<Record<ImageProvider, ImageProviderClient>>;
   private readonly fetchGeminiModels: ModelFetcher;
   private readonly fetchOpenAIModels: ModelFetcher;
+  private readonly fetchAtlasModels: ModelFetcher;
   private readonly imageStorage: ImageStorage;
   private cachedModelContext: { value: ModelContext; expiresAt: number } | null =
     null;
@@ -78,10 +84,19 @@ export class MediaPipelineService {
       });
     }
 
+    if (config.atlasApiKey) {
+      clients.atlas = new AtlasImageClient({
+        apiKey: config.atlasApiKey,
+        defaultModel: config.atlasDefaultModel,
+        requestTimeoutMs: config.requestTimeoutMs,
+      });
+    }
+
     this.clients = { ...clients, ...overrides?.clients };
     this.fetchGeminiModels = overrides?.fetchGeminiModels ?? fetchImageModels;
     this.fetchOpenAIModels =
       overrides?.fetchOpenAIModels ?? fetchOpenAIImageModels;
+    this.fetchAtlasModels = overrides?.fetchAtlasModels ?? fetchAtlasImageModels;
     this.imageStorage = new ImageStorage(config.outputDirectory);
   }
 
@@ -162,6 +177,44 @@ export class MediaPipelineService {
     }
   }
 
+  private getAtlasFallbackModels(): string[] {
+    return [
+      ...new Set([
+        this.config.atlasDefaultModel,
+        ...FALLBACK_ATLAS_IMAGE_MODELS,
+      ]),
+    ];
+  }
+
+  private async discoverAtlasModels(): Promise<ProviderDiscovery> {
+    const warnings: string[] = [];
+
+    try {
+      this.logger.debug("Refreshing image model list from Atlas Cloud API");
+      const discoveredModels = await this.fetchAtlasModels(
+        this.config.atlasApiKey,
+        this.config.requestTimeoutMs
+      );
+
+      if (discoveredModels.length === 0) {
+        warnings.push(
+          "Atlas Cloud model discovery returned no text-to-image models; using fallback defaults."
+        );
+        return { models: this.getAtlasFallbackModels(), warnings };
+      }
+
+      return { models: discoveredModels, warnings };
+    } catch (error) {
+      const errorMessage = formatErrorMessage(error);
+      this.logger.warn("Failed to refresh Atlas Cloud model list; using fallback defaults", {
+        provider: "atlas",
+        error: errorMessage,
+      });
+      warnings.push("Atlas Cloud model discovery failed; using fallback defaults.");
+      return { models: this.getAtlasFallbackModels(), warnings };
+    }
+  }
+
   async getModelContext(): Promise<ModelContext> {
     const now = Date.now();
     if (this.cachedModelContext && this.cachedModelContext.expiresAt > now) {
@@ -183,10 +236,17 @@ export class MediaPipelineService {
       warnings.push(...discovery.warnings);
     }
 
+    if (this.config.atlasApiKey) {
+      const discovery = await this.discoverAtlasModels();
+      modelsByProvider.atlas = discovery.models;
+      warnings.push(...discovery.warnings);
+    }
+
     const availableModels = [
       ...new Set([
         ...(modelsByProvider.gemini ?? []),
         ...(modelsByProvider.openai ?? []),
+        ...(modelsByProvider.atlas ?? []),
       ]),
     ];
 

@@ -10,6 +10,7 @@ export interface MediaPipelineServiceOverrides {
     clients?: Partial<Record<ImageProvider, ImageProviderClient>>;
     fetchGeminiModels?: ModelFetcher;
     fetchOpenAIModels?: ModelFetcher;
+    fetchAtlasModels?: ModelFetcher;
 }
 export declare class MediaPipelineService {
     private readonly config;
@@ -18,6 +19,7 @@ export declare class MediaPipelineService {
     private readonly clients;
     private readonly fetchGeminiModels;
     private readonly fetchOpenAIModels;
+    private readonly fetchAtlasModels;
     private readonly imageStorage;
     private cachedModelContext;
     constructor(config: RuntimeConfig, logger: Logger, modelCacheTtlMs?: number, overrides?: MediaPipelineServiceOverrides);
@@ -25,6 +27,8 @@ export declare class MediaPipelineService {
     private discoverGeminiModels;
     private getOpenAIFallbackModels;
     private discoverOpenAIModels;
+    private getAtlasFallbackModels;
+    private discoverAtlasModels;
     getModelContext(): Promise<ModelContext>;
     createAsset(request: CreateAssetRequest): Promise<CreateAssetResponse>;
 }

@@ -1,10 +1,10 @@
 {
   "manifest_version": "0.3",
   "name": "media-pipeline",
-  "display_name": "Media Pipeline - AI Image Generation (Gemini + OpenAI)",
-  "version": "1.2.1",
-  "description": "Generate AI images locally through a bundled dual-provider MCP server and standalone CLI, powered by Google Gemini or OpenAI (gpt-image-2).",
-  "long_description": "A production-oriented MCP Bundle for local image generation workflows with dual-provider support for Google Gemini or OpenAI (gpt-image-2). The bundle exposes a create_asset MCP tool, validates requests defensively, uses bundled Node entry points for both the MCP server and the standalone CLI, and saves generated images directly to local disk for easy use in websites, documents, and presentations.",
+  "display_name": "Media Pipeline - AI Image Generation",
+  "version": "1.3.0",
+  "description": "Generate AI images locally through a bundled MCP server and standalone CLI, powered by Google Gemini, OpenAI, or Atlas Cloud.",
+  "long_description": "A production-oriented MCP Bundle for local image generation workflows with provider support for Google Gemini, OpenAI, and Atlas Cloud. The bundle exposes a create_asset MCP tool, validates requests defensively, uses bundled Node entry points for both the MCP server and the standalone CLI, and saves generated images directly to local disk for easy use in websites, documents, and presentations.",
   "author": {
     "name": "Claude Image Gen",
     "url": "https://github.com/guinacio/claude-image-gen"
@@ -21,6 +21,7 @@
   "keywords": [
     "gemini",
     "openai",
+    "atlas-cloud",
     "gpt-image",
     "image-generation",
     "mcp",
@@ -38,6 +39,8 @@
         "GEMINI_DEFAULT_MODEL": "${user_config.GEMINI_DEFAULT_MODEL}",
         "OPENAI_API_KEY": "${user_config.OPENAI_API_KEY}",
         "OPENAI_DEFAULT_MODEL": "${user_config.OPENAI_DEFAULT_MODEL}",
+        "ATLASCLOUD_API_KEY": "${user_config.ATLASCLOUD_API_KEY}",
+        "ATLASCLOUD_DEFAULT_MODEL": "${user_config.ATLASCLOUD_DEFAULT_MODEL}",
         "IMAGE_PROVIDER": "${user_config.IMAGE_PROVIDER}",
         "IMAGE_OUTPUT_DIR": "${user_config.IMAGE_OUTPUT_DIR}",
         "GEMINI_REQUEST_TIMEOUT_MS": "${user_config.GEMINI_REQUEST_TIMEOUT_MS}",
@@ -49,7 +52,7 @@
     "GEMINI_API_KEY": {
       "type": "string",
       "title": "Gemini API Key",
-      "description": "Your Google Gemini API key. Get one at https://aistudio.google.com/apikey. At least one of the Gemini or OpenAI API keys must be provided.",
+      "description": "Your Google Gemini API key. Get one at https://aistudio.google.com/apikey. At least one provider API key must be provided.",
       "required": false,
       "sensitive": true
     },
@@ -62,7 +65,7 @@
     "OPENAI_API_KEY": {
       "type": "string",
       "title": "OpenAI API Key",
-      "description": "Your OpenAI API key. Get one at https://platform.openai.com/api-keys. At least one of the Gemini or OpenAI API keys must be provided.",
+      "description": "Your OpenAI API key. Get one at https://platform.openai.com/api-keys. At least one provider API key must be provided.",
       "required": false,
       "sensitive": true
     },
@@ -72,10 +75,23 @@
       "description": "Preferred OpenAI model for image generation.",
       "default": "gpt-image-2"
     },
+    "ATLASCLOUD_API_KEY": {
+      "type": "string",
+      "title": "Atlas Cloud API Key",
+      "description": "Your Atlas Cloud API key. Get one at https://www.atlascloud.ai. At least one provider API key must be provided.",
+      "required": false,
+      "sensitive": true
+    },
+    "ATLASCLOUD_DEFAULT_MODEL": {
+      "type": "string",
+      "title": "Default Atlas Cloud Model",
+      "description": "Preferred Atlas Cloud text-to-image model.",
+      "default": "google/nano-banana-2-lite/text-to-image-developer"
+    },
     "IMAGE_PROVIDER": {
       "type": "string",
       "title": "Default Provider",
-      "description": "Which provider (gemini or openai) to use when a request omits a model. Controls the default model's provider; explicit gpt-image*/dall-e* model names always route to OpenAI regardless of this setting.",
+      "description": "Which provider (gemini, openai, or atlas) to use when a request omits a model. Explicit gpt-image*/dall-e* names route to OpenAI and provider/model names route to Atlas Cloud.",
       "default": "gemini"
     },
     "IMAGE_OUTPUT_DIR": {
@@ -86,7 +102,7 @@
     "GEMINI_REQUEST_TIMEOUT_MS": {
       "type": "number",
       "title": "Request Timeout (ms)",
-      "description": "Maximum time to wait for image generation requests (applies to both Gemini and OpenAI)",
+      "description": "Maximum time to wait for image generation requests (applies to every provider)",
       "default": 60000,
       "min": 1000,
       "max": 300000
@@ -101,7 +117,7 @@
   "tools": [
     {
       "name": "create_asset",
-      "description": "Generate an image with Google Gemini or OpenAI (gpt-image-2), save it locally, and return the output path plus structured metadata."
+      "description": "Generate an image with Google Gemini, OpenAI, or Atlas Cloud, save it locally, and return the output path plus structured metadata."
     }
   ],
   "compatibility": {
@@ -112,7 +128,7 @@
   },
   "privacy_policies": [
     "https://policies.google.com/privacy",
-    "https://openai.com/policies/privacy-policy"
+    "https://openai.com/policies/privacy-policy",
+    "https://www.atlascloud.ai/privacy"
   ]
 }
-

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Standalone CLI for generating images using Google Gemini or OpenAI.
+ * Standalone CLI for generating images using Google Gemini, OpenAI, or Atlas Cloud.
  * This path does not require the MCP server or stdio transport.
  *
  * Usage:

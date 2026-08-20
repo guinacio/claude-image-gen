@@ -27,7 +27,7 @@ const passThroughJsonSchemaValidator = {
 export const CREATE_ASSET_TOOL_NAME = "create_asset";
 export const CREATE_ASSET_TOOL_CONFIG = {
     title: "Create Asset",
-    description: "Generate an image with Google Gemini or OpenAI (gpt-image-2), save it within the configured output directory, and return the saved file path plus structured metadata. The model name selects the provider: gpt-image*/dall-e* models route to OpenAI, all others to Gemini.",
+    description: "Generate an image with Google Gemini, OpenAI, or Atlas Cloud, save it within the configured output directory, and return the saved file path plus structured metadata. The model name selects the provider: gpt-image*/dall-e* models route to OpenAI, namespaced provider/model IDs route to Atlas Cloud, and all others route to Gemini.",
     inputSchema: fromJsonSchema(createAssetInputSchema, passThroughJsonSchemaValidator),
     outputSchema: fromJsonSchema(createAssetOutputSchema, passThroughJsonSchemaValidator),
     annotations: {

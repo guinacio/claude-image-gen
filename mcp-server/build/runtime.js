@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { DEFAULT_LOG_LEVEL, DEFAULT_REQUEST_TIMEOUT_MS, FALLBACK_IMAGE_MODELS, FALLBACK_OPENAI_IMAGE_MODELS, } from "./types.js";
+import { DEFAULT_LOG_LEVEL, DEFAULT_REQUEST_TIMEOUT_MS, FALLBACK_ATLAS_IMAGE_MODELS, FALLBACK_IMAGE_MODELS, FALLBACK_OPENAI_IMAGE_MODELS, } from "./types.js";
 const LOG_LEVEL_PRIORITY = {
     error: 0,
     warn: 1,
@@ -58,10 +58,15 @@ export function resolveDefaultModel(availableModels, configuredDefaultModel) {
     }
     return availableModels[0] || configuredDefaultModel;
 }
-export function parseImageProvider(value, geminiApiKey, openaiApiKey) {
+export function parseImageProvider(value, geminiApiKey, openaiApiKey, atlasApiKey = "") {
     const normalized = value?.trim().toLowerCase();
-    if (normalized === "gemini" || normalized === "openai") {
+    if (normalized === "gemini" ||
+        normalized === "openai" ||
+        normalized === "atlas") {
         return normalized;
+    }
+    if (!geminiApiKey && !openaiApiKey && atlasApiKey) {
+        return "atlas";
     }
     if (!geminiApiKey && openaiApiKey) {
         return "openai";
@@ -69,17 +74,20 @@ export function parseImageProvider(value, geminiApiKey, openaiApiKey) {
     return "gemini";
 }
 export function hasAnyApiKey(config) {
-    return Boolean(config.geminiApiKey || config.openaiApiKey);
+    return Boolean(config.geminiApiKey || config.openaiApiKey || config.atlasApiKey);
 }
 export function createRuntimeConfig(env = process.env) {
     const geminiApiKey = env.GEMINI_API_KEY?.trim() ?? "";
     const openaiApiKey = env.OPENAI_API_KEY?.trim() ?? "";
+    const atlasApiKey = env.ATLASCLOUD_API_KEY?.trim() ?? env.ATLAS_CLOUD_API_KEY?.trim() ?? "";
     return {
         geminiApiKey,
         openaiApiKey,
+        atlasApiKey,
         geminiDefaultModel: env.GEMINI_DEFAULT_MODEL?.trim() || FALLBACK_IMAGE_MODELS[0],
         openaiDefaultModel: env.OPENAI_DEFAULT_MODEL?.trim() || FALLBACK_OPENAI_IMAGE_MODELS[0],
-        defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey),
+        atlasDefaultModel: env.ATLASCLOUD_DEFAULT_MODEL?.trim() || FALLBACK_ATLAS_IMAGE_MODELS[0],
+        defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey, atlasApiKey),
         outputDirectory: resolveOutputDirectory(env.IMAGE_OUTPUT_DIR),
         requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
         logLevel: parseLogLevel(env.MEDIA_PIPELINE_LOG_LEVEL),

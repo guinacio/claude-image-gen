@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "media-pipeline",
   "display_name": "Media Pipeline - AI Image Generation (Gemini + OpenAI)",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Generate AI images locally through a bundled dual-provider MCP server and standalone CLI, powered by Google Gemini or OpenAI (gpt-image-2).",
   "long_description": "A production-oriented MCP Bundle for local image generation workflows with dual-provider support for Google Gemini or OpenAI (gpt-image-2). The bundle exposes a create_asset MCP tool, validates requests defensively, uses bundled Node entry points for both the MCP server and the standalone CLI, and saves generated images directly to local disk for easy use in websites, documents, and presentations.",
   "author": {

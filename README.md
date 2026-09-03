@@ -201,7 +201,7 @@ The skill will proactively suggest image generation when:
 | `OPENAI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your OpenAI API key |
 | `OPENAI_DEFAULT_MODEL` | No | `gpt-image-2` | Default OpenAI model to use |
 | `IMAGE_PROVIDER` | No | `gemini` | Provider (`gemini` or `openai`) used when a request omits `model` |
-| `IMAGE_OUTPUT_DIR` | No | `~/generated-images` | Where to save images |
+| `IMAGE_OUTPUT_DIR` | No | `./generated-images` | Where to save images |
 | `GEMINI_REQUEST_TIMEOUT_MS` | No | `60000` | Request timeout, applies to both Gemini and OpenAI requests |
 | `MEDIA_PIPELINE_LOG_LEVEL` | No | `info` | Stderr logging level |
 

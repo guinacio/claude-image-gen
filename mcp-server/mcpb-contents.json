@@ -1,9 +1,9 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "files": {
     "build/bundle.js": "9d8b235258f89087d150bb5c9e5dea7784d882b6cf3d15f805f701212e2a8fb8",
     "build/cli.bundle.js": "2260c3e8098313ef894516f1c051466a182457e4e80711b13eac87bab594956a",
     "icon.png": "281f09a4f22cc7f768ea9d0746020ebc68a464afeea31f74e4c18f6de140c281",
-    "manifest.json": "50d66f85432942a6573370f307b13ba4b88afb093be33f6c8deb96cea6743743"
+    "manifest.json": "cd8889a0f39c2923b456c087c50fc8afeade059bab6dc5f7248fd94e7917de82"
   }
 }

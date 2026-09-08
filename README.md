@@ -114,7 +114,7 @@ Add to your Claude Code config (`~/.claude.json`):
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2}",
         "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-gemini}",
-        "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-./generated-images}",
+        "IMAGE_OUTPUT_DIR": "${IMAGE_OUTPUT_DIR:-~/generated-images}",
         "GEMINI_REQUEST_TIMEOUT_MS": "${GEMINI_REQUEST_TIMEOUT_MS:-60000}",
         "MEDIA_PIPELINE_LOG_LEVEL": "${MEDIA_PIPELINE_LOG_LEVEL:-info}"
       }
@@ -201,7 +201,7 @@ The skill will proactively suggest image generation when:
 | `OPENAI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your OpenAI API key |
 | `OPENAI_DEFAULT_MODEL` | No | `gpt-image-2` | Default OpenAI model to use |
 | `IMAGE_PROVIDER` | No | `gemini` | Provider (`gemini` or `openai`) used when a request omits `model` |
-| `IMAGE_OUTPUT_DIR` | No | `./generated-images` | Where to save images |
+| `IMAGE_OUTPUT_DIR` | No | `~/generated-images` | Where to save images. Left unset, the MCP server writes to `generated-images` in your home directory — not the current directory, since a server launched by Claude Desktop/Code has an unpredictable working directory. Relative paths are resolved against that working directory. `~`, `$HOME`, and `%USERPROFILE%` are expanded. The bundled plugin config (`.mcp.json`) sets `./generated-images` explicitly, and the CLI defaults to the current directory instead (see `--output-dir`) |
 | `GEMINI_REQUEST_TIMEOUT_MS` | No | `60000` | Request timeout, applies to both Gemini and OpenAI requests |
 | `MEDIA_PIPELINE_LOG_LEVEL` | No | `info` | Stderr logging level |
 

@@ -118,13 +118,17 @@ The front view is required, the rest are optional, and at least two images are
 needed in total. It is also **cheaper**, since the `image-to-multiview` step is
 skipped.
 
-**The list is positional.** Querying a finished task shows the API stored those
-views as `files`, a list of exactly four entries in the order
-`[front, left, back, right]`, with the names gone. The documented way to omit a
-view is to leave its slot without a file token, not to shorten the list — so a
-request carrying only a front and a back view, sent as two entries, risks having
-the back view read as a left view. `tripo.py` always sends four slots for that
-reason.
+**The stored task is positional, but the input `tripo.py` sends is not.**
+Querying a finished task shows the API stored those views as `files`, a list of
+exactly four entries in the order `[front, left, back, right]`, with the names
+gone — that is the API's own storage representation. What `tripo.py` actually
+sends is the keyed form, one entry per supplied view (`{front: <token>}`,
+`{left: <token>}`, and so on), and the server matches by key rather than by
+position: an omitted view is simply an absent entry, not an empty slot. Tripo
+also accepts a separate *legacy* positional format — four bare strings, `""`
+for a skipped view — but the two formats cannot be mixed, and `tripo.py` does
+not use it, so there is no risk of a two-view request being misread as
+front-and-left.
 
 The catch is consistency: Tripo asks that all views show the same object under
 consistent lighting. Three rules earn their keep here.

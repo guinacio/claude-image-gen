@@ -57,7 +57,7 @@
       "type": "string",
       "title": "Default Model",
       "description": "Preferred model for image generation. Available models are fetched dynamically from the Gemini API at runtime.",
-      "default": "gemini-3-pro-image-preview"
+      "default": "gemini-3-pro-image"
     },
     "OPENAI_API_KEY": {
       "type": "string",

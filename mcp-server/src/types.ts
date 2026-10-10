@@ -24,9 +24,13 @@ export const ALPHA_CAPABLE_OUTPUT_FORMATS: readonly ImageOutputFormat[] = [
   "webp",
 ];
 
+// Used only when Gemini model discovery fails. These are current GA image
+// models: gemini-3-pro-image-preview shut down on 2026-06-25, and
+// gemini-2.5-flash-image is scheduled to shut down on 2027-03-15.
+// https://ai.google.dev/gemini-api/docs/deprecations
 export const FALLBACK_IMAGE_MODELS = [
-  "gemini-3-pro-image-preview",
-  "gemini-2.5-flash-image",
+  "gemini-3-pro-image",
+  "gemini-3.1-flash-lite-image",
 ] as const;
 
 export const FALLBACK_OPENAI_IMAGE_MODELS = ["gpt-image-2"] as const;

@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   computePackContents,
+  hashPackedBytes,
   readRecordedPackContents,
 } from "../scripts/pack-contents.mjs";
 
@@ -30,6 +31,14 @@ test("media-pipeline.mcpb was packed from the current build", () => {
     recorded,
     "the packed extension is out of date — run `npm run pack:mcpb`"
   );
+});
+
+test("text pack hashes ignore CRLF line endings", () => {
+  const lf = Buffer.from('{\n  "version": "1.2.2"\n}\n');
+  const crlf = Buffer.from('{\r\n  "version": "1.2.2"\r\n}\r\n');
+
+  assert.equal(hashPackedBytes("manifest.json", crlf), hashPackedBytes("manifest.json", lf));
+  assert.notEqual(hashPackedBytes("icon.png", crlf), hashPackedBytes("icon.png", lf));
 });
 
 test("the recorded pack matches the current version", () => {

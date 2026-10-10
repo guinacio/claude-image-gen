@@ -16,9 +16,9 @@ test("resolveProviderForModel routes OpenAI model families to openai", () => {
 });
 
 test("resolveProviderForModel defaults everything else to gemini", () => {
-  assert.equal(resolveProviderForModel("gemini-3-pro-image-preview"), "gemini");
-  assert.equal(resolveProviderForModel("gemini-2.5-flash-image"), "gemini");
-  assert.equal(resolveProviderForModel(" Gemini-3-Pro-Image-Preview "), "gemini");
+  assert.equal(resolveProviderForModel("gemini-3-pro-image"), "gemini");
+  assert.equal(resolveProviderForModel("gemini-3.1-flash-lite-image"), "gemini");
+  assert.equal(resolveProviderForModel(" Gemini-3-Pro-Image "), "gemini");
   assert.equal(resolveProviderForModel("some-unknown-model"), "gemini");
 });
 
@@ -70,6 +70,6 @@ test("createRuntimeConfig falls back to built-in defaults", () => {
 
   assert.equal(config.openaiApiKey, "");
   assert.equal(config.openaiDefaultModel, "gpt-image-2");
-  assert.equal(config.geminiDefaultModel, "gemini-3-pro-image-preview");
+  assert.equal(config.geminiDefaultModel, "gemini-3-pro-image");
   assert.equal(config.defaultProvider, "gemini");
 });

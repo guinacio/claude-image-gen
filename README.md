@@ -110,7 +110,7 @@ Add to your Claude Code config (`~/.claude.json`):
       "args": ["/path/to/claude-image-gen/mcp-server/build/bundle.js"],
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}",
-        "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image-preview}",
+        "GEMINI_DEFAULT_MODEL": "${GEMINI_DEFAULT_MODEL:-gemini-3-pro-image}",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
         "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2}",
         "IMAGE_PROVIDER": "${IMAGE_PROVIDER:-gemini}",
@@ -197,7 +197,7 @@ The skill will proactively suggest image generation when:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your Gemini API key |
-| `GEMINI_DEFAULT_MODEL` | No | `gemini-3-pro-image-preview` | Default Gemini model to use |
+| `GEMINI_DEFAULT_MODEL` | No | `gemini-3-pro-image` | Default Gemini model to use |
 | `OPENAI_API_KEY` | At least one of `GEMINI_API_KEY` / `OPENAI_API_KEY` | - | Your OpenAI API key |
 | `OPENAI_DEFAULT_MODEL` | No | `gpt-image-2` | Default OpenAI model to use |
 | `IMAGE_PROVIDER` | No | `gemini` | Provider (`gemini` or `openai`) used when a request omits `model` |
@@ -220,7 +220,7 @@ The server is dual-provider: it routes each request to Google Gemini or OpenAI (
 
 ### Models
 
-Gemini models are fetched dynamically from the Gemini API at runtime; the CLI and MCP tool validate Gemini model choices against the current image-capable model list, and `GEMINI_DEFAULT_MODEL` is used when available. For OpenAI, `gpt-image-2` is the default model (`OPENAI_DEFAULT_MODEL`); any `gpt-image*`/`dall-e*` model name routes to OpenAI.
+Gemini models are fetched dynamically from the Gemini API at runtime; the CLI and MCP tool validate Gemini model choices against the current image-capable model list, and `GEMINI_DEFAULT_MODEL` is used when available. When discovery fails, the built-in fallbacks are `gemini-3-pro-image` and `gemini-3.1-flash-lite-image`. For OpenAI, `gpt-image-2` is the default model (`OPENAI_DEFAULT_MODEL`); any `gpt-image*`/`dall-e*` model name routes to OpenAI.
 
 ### Aspect Ratios
 

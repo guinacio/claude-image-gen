@@ -1,1 +1,4 @@
+* text=auto eol=lf
+*.png binary
+*.mcpb binary
 example/* linguist-documentation

@@ -156,7 +156,7 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 
 The CLI is dual-provider: the `--model` value routes the request — model names starting with `gpt-image` or `dall-e` go to OpenAI, everything else goes to Gemini. When `--model` is omitted, `IMAGE_PROVIDER` picks which provider's default model is used.
 
-- **Gemini** (`GEMINI_DEFAULT_MODEL`, e.g. `gemini-3-pro-image-preview`) — models are fetched dynamically from the Gemini API; the CLI falls back to the first discovered image-capable model if no default is set. Prefer Gemini for iterative creative work and when relying on the dynamically discovered model catalog.
+- **Gemini** (`GEMINI_DEFAULT_MODEL`, e.g. `gemini-3-pro-image`) — models are fetched dynamically from the Gemini API; the CLI falls back to the first discovered image-capable model if no default is set. Prefer Gemini for iterative creative work and when relying on the dynamically discovered model catalog.
 - **OpenAI** (`OPENAI_DEFAULT_MODEL`, default `gpt-image-2`) — use when you specifically need OpenAI's `gpt-image-2` model, or when only an OpenAI API key is configured. Note OpenAI's image sizes are limited to `1024x1024`/`1536x1024`/`1024x1536`; non-matching aspect ratios are mapped to the nearest supported size with a warning.
 
 ## Best Practices

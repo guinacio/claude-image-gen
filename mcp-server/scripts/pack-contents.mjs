@@ -23,9 +23,48 @@ const PACKED_FILES = [
   "manifest.json",
 ];
 
+// Text inputs are packed as LF. Hashing the LF bytes means a Windows checkout
+// (core.autocrlf) and an LF checkout record the same digest, and that digest
+// is what `mcpb pack` stores after `writePackedTextAsLf()`.
+const TEXT_PACKED_FILES = new Set([
+  "build/bundle.js",
+  "build/cli.bundle.js",
+  "manifest.json",
+]);
+
+export function normalizePackedBytes(relativePath, data) {
+  if (!TEXT_PACKED_FILES.has(relativePath)) {
+    return data;
+  }
+
+  return Buffer.from(data.toString("utf8").replace(/\r\n/g, "\n"), "utf8");
+}
+
+export function hashPackedBytes(relativePath, data) {
+  return crypto
+    .createHash("sha256")
+    .update(normalizePackedBytes(relativePath, data))
+    .digest("hex");
+}
+
+export function writePackedTextAsLf() {
+  for (const relativePath of TEXT_PACKED_FILES) {
+    const filePath = path.join(serverDirectory, relativePath);
+    if (!fs.existsSync(filePath)) {
+      continue;
+    }
+
+    const data = fs.readFileSync(filePath);
+    const normalized = normalizePackedBytes(relativePath, data);
+    if (!data.equals(normalized)) {
+      fs.writeFileSync(filePath, normalized);
+    }
+  }
+}
+
 function hashFile(relativePath) {
   const data = fs.readFileSync(path.join(serverDirectory, relativePath));
-  return crypto.createHash("sha256").update(data).digest("hex");
+  return hashPackedBytes(relativePath, data);
 }
 
 export function computePackContents() {
@@ -40,6 +79,12 @@ export function readRecordedPackContents() {
 }
 
 function main() {
+  if (process.argv.includes("--normalize")) {
+    writePackedTextAsLf();
+    console.log("Normalized packed text files to LF.");
+    return;
+  }
+
   const version = JSON.parse(
     fs.readFileSync(path.join(serverDirectory, "package.json"), "utf8")
   ).version;

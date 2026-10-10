@@ -6,7 +6,7 @@ export declare const IMAGE_OUTPUT_FORMATS: readonly ["png", "jpeg", "webp"];
 export type ImageOutputFormat = (typeof IMAGE_OUTPUT_FORMATS)[number];
 /** Formats that can carry an alpha channel, and therefore a transparent background. */
 export declare const ALPHA_CAPABLE_OUTPUT_FORMATS: readonly ImageOutputFormat[];
-export declare const FALLBACK_IMAGE_MODELS: readonly ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"];
+export declare const FALLBACK_IMAGE_MODELS: readonly ["gemini-3-pro-image", "gemini-3.1-flash-lite-image"];
 export declare const FALLBACK_OPENAI_IMAGE_MODELS: readonly ["gpt-image-2"];
 export type ImageProvider = "gemini" | "openai";
 export declare const DEFAULT_REQUEST_TIMEOUT_MS = 60000;

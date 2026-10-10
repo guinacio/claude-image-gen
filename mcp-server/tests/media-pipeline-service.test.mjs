@@ -95,21 +95,21 @@ test("createAsset routes Gemini models to the Gemini client", async () => {
       { GEMINI_API_KEY: "gemini-key", OPENAI_API_KEY: "openai-key" },
       {
         clients: { gemini: geminiClient, openai: openaiClient },
-        fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
+        fetchGeminiModels: async () => ["gemini-3-pro-image"],
         fetchOpenAIModels: async () => ["gpt-image-2"],
       }
     );
 
     const response = await service.createAsset({
       prompt: "a friendly robot",
-      model: "gemini-3-pro-image-preview",
+      model: "gemini-3-pro-image",
     });
 
     assert.equal(response.success, true, response.error);
-    assert.equal(response.model, "gemini-3-pro-image-preview");
+    assert.equal(response.model, "gemini-3-pro-image");
     assert.equal(geminiClient.calls.length, 1);
     assert.equal(openaiClient.calls.length, 0);
-    assert.equal(geminiClient.calls[0].model, "gemini-3-pro-image-preview");
+    assert.equal(geminiClient.calls[0].model, "gemini-3-pro-image");
     assert.ok(fs.existsSync(response.filePath));
   } finally {
     removeDirectory(outputDirectory);
@@ -127,7 +127,7 @@ test("createAsset routes OpenAI models to the OpenAI client", async () => {
       { GEMINI_API_KEY: "gemini-key", OPENAI_API_KEY: "openai-key" },
       {
         clients: { gemini: geminiClient, openai: openaiClient },
-        fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
+        fetchGeminiModels: async () => ["gemini-3-pro-image"],
         fetchOpenAIModels: async () => ["gpt-image-2"],
       }
     );
@@ -158,7 +158,7 @@ test("createAsset merges both providers into the available model list", async ()
       { GEMINI_API_KEY: "gemini-key", OPENAI_API_KEY: "openai-key" },
       {
         clients: { gemini: createFakeClient(), openai: createFakeClient() },
-        fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
+        fetchGeminiModels: async () => ["gemini-3-pro-image"],
         fetchOpenAIModels: async () => ["gpt-image-2"],
       }
     );
@@ -166,10 +166,10 @@ test("createAsset merges both providers into the available model list", async ()
     const modelContext = await service.getModelContext();
 
     assert.deepEqual(modelContext.availableModels, [
-      "gemini-3-pro-image-preview",
+      "gemini-3-pro-image",
       "gpt-image-2",
     ]);
-    assert.equal(modelContext.defaultModel, "gemini-3-pro-image-preview");
+    assert.equal(modelContext.defaultModel, "gemini-3-pro-image");
     assert.deepEqual(modelContext.warnings, []);
   } finally {
     removeDirectory(outputDirectory);
@@ -186,7 +186,7 @@ test("createAsset reports PROVIDER_NOT_CONFIGURED when the OpenAI key is missing
       { GEMINI_API_KEY: "gemini-key", IMAGE_PROVIDER: "openai" },
       {
         clients: { gemini: geminiClient },
-        fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
+        fetchGeminiModels: async () => ["gemini-3-pro-image"],
         fetchOpenAIModels: async () => {
           throw new Error("OpenAI discovery must not run without a key");
         },
@@ -256,7 +256,7 @@ test("createAsset still rejects unknown models across both providers", async () 
       { GEMINI_API_KEY: "gemini-key", OPENAI_API_KEY: "openai-key" },
       {
         clients: { gemini: createFakeClient(), openai: createFakeClient() },
-        fetchGeminiModels: async () => ["gemini-3-pro-image-preview"],
+        fetchGeminiModels: async () => ["gemini-3-pro-image"],
         fetchOpenAIModels: async () => ["gpt-image-2"],
       }
     );
@@ -268,7 +268,7 @@ test("createAsset still rejects unknown models across both providers", async () 
 
     assert.equal(response.success, false);
     assert.equal(response.errorCode, "INVALID_MODEL");
-    assert.match(response.error, /gemini-3-pro-image-preview, gpt-image-2/);
+    assert.match(response.error, /gemini-3-pro-image, gpt-image-2/);
   } finally {
     removeDirectory(outputDirectory);
   }

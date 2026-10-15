@@ -493,12 +493,12 @@ def run(image_path, args):
     elif args.direct:
         print("Reconstructing from the single image...")
         body = reconstruction_body(args, textured)
-        body["file_token"] = front_token
+        body["input"] = front_token
         model_task = post("/generation/image-to-model", body)["task_id"]
     else:
         print("Generating the four views...")
         multiview_task = post(
-            "/generation/image-to-multiview", {"file_token": front_token}
+            "/generation/image-to-multiview", {"input": front_token}
         )["task_id"]
         poll(multiview_task, args.timeout)
 

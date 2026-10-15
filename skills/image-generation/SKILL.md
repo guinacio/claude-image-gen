@@ -149,8 +149,9 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 2. **Invoke Skill** - Use the Skill tool with `skill: "image-generation"` immediately
 3. **Analyze Context** - Understand project style and brand
 4. **Craft Prompt** - Build detailed prompt using the formula above
-5. **Generate** - Run the CLI script with optimized parameters
-6. **Integrate** - Place image in project with proper references
+5. **Confirm (iterative work)** - When the user is iterating on an image with you (concept art, edits, anything built from reference images), show them the full prompt, the model and each reference image with what it is for, and wait for their ok. Every generation is billed, and a wrong model or reference wastes one. Routine website imagery can skip this step.
+6. **Generate** - Run the CLI script with optimized parameters
+7. **Integrate** - Place image in project with proper references
 
 ## Model Selection
 
@@ -168,7 +169,7 @@ The default is not the only OpenAI choice. Any `gpt-image*` name is passed throu
 | `gpt-image-2` | The CLI default |
 | `gpt-image-1.5`, `gpt-image-1` | Deprecated; OpenAI lists shutdown on 2026-12-01 and 2026-10-23 |
 
-Names ending in a date (`gpt-image-2.5-flare-2026-09-08`) are snapshots that pin one version so results stay reproducible. OpenAI suggests Flare when `gpt-image-2` quality is already enough and Sunburst where it falls short, and warns that speed and price differences depend on the workload. Tell the user which model you plan to use, and why, before generating.
+Names ending in a date (`gpt-image-2.5-flare-2026-09-08`) are snapshots that pin one version so results stay reproducible. OpenAI suggests Flare when `gpt-image-2` quality is already enough and Sunburst where it falls short, and warns that speed and price differences depend on the workload. Tell the user which model you plan to use, and why, as part of the Confirm step.
 
 ## Best Practices
 

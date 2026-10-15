@@ -8,6 +8,7 @@ Standard library only -- no pip install needed.
     python tripo.py front.png --back b.png --left l.png --yes   # your own views
     python tripo.py front.png --yes --texture          # also generate texture maps
     python tripo.py front.png --yes --smart-low-poly --face-limit 10000 --quad
+    python tripo.py front.png --yes --model-version P2-20260801 --quad --face-limit 20000
 
 Two ways in, and the difference matters.
 
@@ -40,12 +41,19 @@ Credit costs come from the published pricing table (1 credit = $0.01 USD):
     multiview-to-model  plain  20   textured  30
     image-to-model      plain  20   textured  30   (--direct)
 
+    P Series (--model-version P1-* or P2-*) replaces that base:
+        P1                plain  40   textured  50
+        P2                plain 100   textured 110
+
     add-ons, stacking on that base:
         --texture-quality detailed        +10
-        --geometry-quality detailed       +20
-        --smart-low-poly                  +10
-        --quad                             +5
-        --generate-parts                  +20
+        --geometry-quality detailed       +20   (H Series only)
+        --smart-low-poly                  +10   (H Series only)
+        --quad                             +5   (H Series; P2 lists no add-on)
+        --generate-parts                  +20   (H Series only)
+
+The P Series builds low-poly topology natively, so it takes none of the H
+Series mesh options. P2 is the only P model with --quad, and it is in preview.
 """
 
 import argparse
@@ -64,14 +72,21 @@ API_BASE = "https://openapi.tripo3d.ai/v3"
 POLL_SECONDS = 2
 DEFAULT_TIMEOUT_SECONDS = 600
 
-MODEL_VERSIONS = ["v3.1-20260211", "v3.0-20250812"]
+MODEL_P1 = "P1-20260311"
+MODEL_P2 = "P2-20260801"
+MODEL_VERSIONS = ["v3.1-20260211", "v3.0-20250812", MODEL_P1, MODEL_P2]
 DEFAULT_MODEL_VERSION = MODEL_VERSIONS[0]
+P_SERIES = {MODEL_P1, MODEL_P2}
 
 # The four view slots, in the order the API expects them.
 VIEW_ORDER = ["front", "left", "back", "right"]
 
 COST_IMAGE_TO_MULTIVIEW = 10
-COST_TO_MODEL = {True: 30, False: 20}  # keyed by "textured"
+COST_TO_MODEL = {True: 30, False: 20}  # H Series, keyed by "textured"
+COST_TO_MODEL_P = {
+    MODEL_P1: {True: 50, False: 40},
+    MODEL_P2: {True: 110, False: 100},
+}
 COST_TEXTURE_DETAILED = 10
 COST_GEOMETRY_DETAILED = 20
 COST_SMART_LOW_POLY = 10
@@ -82,6 +97,13 @@ COST_GENERATE_PARTS = 20
 FACE_LIMIT_SMART = (1000, 20000)
 FACE_LIMIT_SMART_QUAD = (500, 10000)
 FACE_LIMIT_QUAD_ADVISED = 150000
+
+# The P Series has its own face_limit ranges, with or without quad.
+FACE_LIMIT_P = {
+    (MODEL_P1, False): (50, 20000),
+    (MODEL_P2, False): (48, 50000),
+    (MODEL_P2, True): (48, 25000),
+}
 
 TERMINAL_FAILURES = {"failed", "cancelled"}
 
@@ -257,7 +279,8 @@ def addon_costs(args, textured):
         addons.append(("geometry_quality=detailed", COST_GEOMETRY_DETAILED))
     if args.smart_low_poly:
         addons.append(("smart_low_poly", COST_SMART_LOW_POLY))
-    if args.quad:
+    # The P2 pricing lists no quad add-on on top of its base.
+    if args.quad and args.model_version not in P_SERIES:
         addons.append(("quad", COST_QUAD))
     if args.generate_parts:
         addons.append(("generate_parts", COST_GENERATE_PARTS))
@@ -269,6 +292,9 @@ def check_options(args, textured):
 
     Cheaper to fail here than to have a submitted job rejected, and clearer
     than reading back Tripo's validation message."""
+    if args.model_version in P_SERIES:
+        check_p_series_options(args)
+
     if args.smart_low_poly:
         low, high = FACE_LIMIT_SMART_QUAD if args.quad else FACE_LIMIT_SMART
         with_quad = " (with --quad)" if args.quad else ""
@@ -308,10 +334,40 @@ def check_options(args, textured):
             )
 
 
+def check_p_series_options(args):
+    """The P Series builds its own low-poly topology and rejects the H Series
+    mesh options outright, so they are refused here instead."""
+    model = args.model_version
+    unsupported = [
+        flag
+        for flag, on in (
+            ("--geometry-quality", args.geometry_quality),
+            ("--smart-low-poly", args.smart_low_poly),
+            ("--generate-parts", args.generate_parts),
+            ("--compress", args.compress),
+            ("--quad", args.quad and model != MODEL_P2),
+        )
+        if on
+    ]
+    if unsupported:
+        raise TripoError(
+            f"{model} does not take " + ", ".join(unsupported) + "."
+        )
+
+    if args.face_limit is not None:
+        low, high = FACE_LIMIT_P[(model, bool(args.quad))]
+        if not low <= args.face_limit <= high:
+            with_quad = " with --quad" if args.quad else ""
+            raise TripoError(
+                f"--face-limit {args.face_limit} is outside {low}-{high}, the "
+                f"range {model} accepts{with_quad}."
+            )
+
+
 def reconstruction_body(args, textured):
     """The parameters shared by both reconstruction endpoints."""
     body = {
-        "model_version": args.model_version,
+        "model": args.model_version,
         "texture": textured,
         "pbr": textured,
     }
@@ -383,14 +439,15 @@ def run(image_path, args):
 
     check_options(args, textured)
 
+    base_cost = COST_TO_MODEL_P.get(args.model_version, COST_TO_MODEL)[textured]
     if supplied_views:
-        steps = [("multiview-to-model", COST_TO_MODEL[textured])]
+        steps = [("multiview-to-model", base_cost)]
     elif args.direct:
-        steps = [("image-to-model", COST_TO_MODEL[textured])]
+        steps = [("image-to-model", base_cost)]
     else:
         steps = [
             ("image-to-multiview", COST_IMAGE_TO_MULTIVIEW),
-            ("multiview-to-model", COST_TO_MODEL[textured]),
+            ("multiview-to-model", base_cost),
         ]
 
     addons = addon_costs(args, textured)
@@ -497,7 +554,8 @@ def main(argv):
         "--model-version",
         choices=MODEL_VERSIONS,
         default=DEFAULT_MODEL_VERSION,
-        help=f"reconstruction model (default: {DEFAULT_MODEL_VERSION})",
+        help=f"reconstruction model (default: {DEFAULT_MODEL_VERSION}); the P "
+        "Series builds low-poly topology natively, P2 is in preview",
     )
 
     texture = parser.add_argument_group("texture")

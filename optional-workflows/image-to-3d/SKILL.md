@@ -29,7 +29,7 @@ Needs `TRIPO_API_KEY` in the environment. Standard library only, no install.
 | `--yes` | actually submit and spend |
 | `--left`, `--back`, `--right` | supply your own views instead of letting Tripo invent them |
 | `--direct` | single-image path, skips multiview: cheaper, least accurate geometry |
-| `--model-version` | `v3.1-20260211` (default) or `v3.0-20250812` |
+| `--model-version` | H Series `v3.1-20260211` (default) or `v3.0-20250812`; P Series `P1-20260311` or `P2-20260801` (preview), see below |
 | `--name`, `--output-dir` | naming and destination |
 
 Texture — all inert unless `--texture` is passed:
@@ -64,7 +64,7 @@ Other:
 
 ## Low poly: build it or collapse it
 
-Two ways to get a light mesh, and they are not equivalent.
+Three ways to get a light mesh, and they are not equivalent.
 
 **Collapse it afterwards.** Decimate the dense GLB you already have, in Blender
 or any DCC. Free, keeps the shape you already approved, and preserves the UVs
@@ -91,6 +91,16 @@ comparable, but the wireframes are not: the decimation is a spray of thin
 slivers with the density landing wherever the collapse happened to leave it,
 while the smart mesh runs even quads that follow the surface, with ring loops
 around limbs. Only one of the two is editable.
+
+**Use a P Series model.** `--model-version P1-20260311` or `P2-20260801`
+selects Tripo's low-poly line, which builds clean topology natively instead of
+through `--smart-low-poly`. It costs more (P1 40, P2 100, +10 textured) and
+takes none of the H Series mesh options: `--geometry-quality`,
+`--smart-low-poly`, `--generate-parts` and `--compress` are refused before
+anything is spent. `face_limit` is 50-20000 on P1 and 48-50000 on P2
+(48-25000 with `--quad`); P2 is the only P model with `--quad`, and Tripo
+still labels it preview. Tripo advises at least 150 faces for simple models
+and 250 for complex ones.
 
 **`--quad` returns FBX, not GLB.** glTF has no quads, so the model URL of a
 quad job carries a `.fbx` file — `Kaydara FBX Binary` in the first bytes.
@@ -186,6 +196,9 @@ objects.
 So supplying your own views costs **20 credits**, letting Tripo invent them
 costs 30, and `--texture` adds 10 to either.
 
+The P Series replaces the reconstruction base: P1 costs 40 (50 textured) and
+P2 costs 100 (110 textured). The image-to-multiview step stays at 10.
+
 Geometry only is the default because reconstruction textures are baked from the
 input views and tend to be replaced in the DCC anyway. The mesh is identical
 either way — a model that arrived textured can simply have its material removed.
@@ -197,7 +210,7 @@ Add-ons stack on that base, and the script exposes all of them:
 | `--texture-quality detailed` | +10 |
 | `--geometry-quality detailed` | +20 |
 | `--smart-low-poly` | +10 |
-| `--quad` | +5 |
+| `--quad` | +5 (H Series; P2's pricing lists no quad add-on) |
 | `--generate-parts` | +20 |
 
 A dry run prints the add-ons it is about to request and the resulting total, and
@@ -217,7 +230,7 @@ paid job and comparing `input` and `credits_consumed` with what was asked for:
 |---|---|
 | `texture` + `pbr` | textured `multiview-to-model` billed exactly 30 credits |
 | `smart_low_poly` + `quad` + `face_limit: 10000` | billed 45, and returned 9859 quads with 2386 triangles — inside the requested cap |
-| `model_version` | echoed back as `v3.1-20260211`, so the field name is read |
+| `model` | the documented name of the field once sent as `model_version`, which was echoed back as `v3.1-20260211`; an invalid value under either name is rejected with `1004 invalid model`, listing `P1-20260311, P2-20260801, v2.5-20250123, v3.0-20250812, v3.1-20260211` |
 | `inputs` with named views | stored as positional `files`, names discarded |
 | `export_uv`, `geometry_quality: standard` | appear in the stored input as defaults, unset |
 
@@ -231,7 +244,9 @@ only proves the flag parses and the cost adds up — not that Tripo honours it:
 false`, `generate_parts`, `geometry_quality: detailed`. The pricing for those
 comes from the published table rather than from an observed
 `credits_consumed`, and the single-image paths (`--direct` and the
-`image-to-multiview` step) were not run either.
+`image-to-multiview` step) were not run either. No P Series job has been run:
+its prices, face ranges and refused options come from the developer docs and
+the pricing page.
 
 The local validation rules — the `face_limit` ranges, `generate_parts` refusing
 textures and quads, `auto_size` needing a texture — are transcribed from the

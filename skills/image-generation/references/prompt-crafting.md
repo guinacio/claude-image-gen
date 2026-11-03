@@ -1,5 +1,7 @@
 # Advanced Prompt Crafting
 
+Working from reference images (a layout blockout, a style, an image to refine)? See [reference-images.md](reference-images.md).
+
 ## Style Keywords
 
 ### Photographic Styles

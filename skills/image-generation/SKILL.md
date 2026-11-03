@@ -149,15 +149,27 @@ soft pastel colors, isometric perspective, clean lines, friendly approachable st
 2. **Invoke Skill** - Use the Skill tool with `skill: "image-generation"` immediately
 3. **Analyze Context** - Understand project style and brand
 4. **Craft Prompt** - Build detailed prompt using the formula above
-5. **Generate** - Run the CLI script with optimized parameters
-6. **Integrate** - Place image in project with proper references
+5. **Confirm (iterative work)** - When the user is iterating on an image with you (concept art, edits, anything built from reference images), show them the full prompt, the model and each reference image with what it is for, and wait for their ok. Every generation is billed, and a wrong model or reference wastes one. Routine website imagery can skip this step.
+6. **Generate** - Run the CLI script with optimized parameters
+7. **Integrate** - Place image in project with proper references
 
 ## Model Selection
 
 The CLI is dual-provider: the `--model` value routes the request — model names starting with `gpt-image` or `dall-e` go to OpenAI, everything else goes to Gemini. When `--model` is omitted, `IMAGE_PROVIDER` picks which provider's default model is used.
 
 - **Gemini** (`GEMINI_DEFAULT_MODEL`, e.g. `gemini-3-pro-image`) — models are fetched dynamically from the Gemini API; the CLI falls back to the first discovered image-capable model if no default is set. Prefer Gemini for iterative creative work and when relying on the dynamically discovered model catalog.
-- **OpenAI** (`OPENAI_DEFAULT_MODEL`, default `gpt-image-2`) — use when you specifically need OpenAI's `gpt-image-2` model, or when only an OpenAI API key is configured. Note OpenAI's image sizes are limited to `1024x1024`/`1536x1024`/`1024x1536`; non-matching aspect ratios are mapped to the nearest supported size with a warning.
+- **OpenAI** (`OPENAI_DEFAULT_MODEL`, default `gpt-image-2`) — use when you specifically need an OpenAI model, or when only an OpenAI API key is configured. Note the CLI limits OpenAI image sizes to `1024x1024`/`1536x1024`/`1024x1536`; non-matching aspect ratios are mapped to the nearest supported size with a warning.
+
+The default is not the only OpenAI choice. Any `gpt-image*` name is passed through, and a key often lists several (`GET https://api.openai.com/v1/models`). Per OpenAI's [image prompting guide](https://developers.openai.com/api/docs/guides/image-prompting) and [models page](https://developers.openai.com/api/docs/models):
+
+| Model | What it is |
+|---|---|
+| `gpt-image-2.5-sunburst` | Base model, optimized for quality: higher image quality than `gpt-image-2`; OpenAI's most capable for generation and editing |
+| `gpt-image-2.5-flare` | Small model, optimized for speed, with quality comparable to `gpt-image-2` |
+| `gpt-image-2` | The CLI default |
+| `gpt-image-1.5`, `gpt-image-1` | Deprecated; OpenAI lists shutdown on 2026-12-01 and 2026-10-23 |
+
+Names ending in a date (`gpt-image-2.5-flare-2026-09-08`) are snapshots that pin one version so results stay reproducible. OpenAI suggests Flare when `gpt-image-2` quality is already enough and Sunburst where it falls short, and warns that speed and price differences depend on the workload. Tell the user which model you plan to use, and why, as part of the Confirm step.
 
 ## Best Practices
 
@@ -175,6 +187,8 @@ The CLI is dual-provider: the `--model` value routes the request — model names
 ## Reference
 
 For advanced prompt techniques: [references/prompt-crafting.md](references/prompt-crafting.md)
+
+For layout control with a blockout render and other uses of `--reference-images`: [references/reference-images.md](references/reference-images.md)
 
 ## Alternative: MCP Tool
 

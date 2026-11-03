@@ -231,6 +231,7 @@ paid job and comparing `input` and `credits_consumed` with what was asked for:
 | `texture` + `pbr` | textured `multiview-to-model` billed exactly 30 credits |
 | `smart_low_poly` + `quad` + `face_limit: 10000` | billed 45, and returned 9859 quads with 2386 triangles — inside the requested cap |
 | `model` | the documented name of the field once sent as `model_version`, which was echoed back as `v3.1-20260211`; an invalid value under either name is rejected with `1004 invalid model`, listing `P1-20260311, P2-20260801, v2.5-20250123, v3.0-20250812, v3.1-20260211` |
+| `input` on `image-to-multiview` | the default path (`image-to-multiview` then `multiview-to-model`) succeeded with the upload token sent as `input`, billed 30 in total; the same request with `file_token` was rejected with `1004 input is required for image-to-multiview` before charging |
 | `inputs` with named views | stored as positional `files`, names discarded |
 | `export_uv`, `geometry_quality: standard` | appear in the stored input as defaults, unset |
 
@@ -243,10 +244,11 @@ only proves the flag parses and the cost adds up — not that Tripo honours it:
 `enable_image_autofix`, `auto_size`, `orientation`, `compress`, `export_uv:
 false`, `generate_parts`, `geometry_quality: detailed`. The pricing for those
 comes from the published table rather than from an observed
-`credits_consumed`, and the single-image paths (`--direct` and the
-`image-to-multiview` step) were not run either. No P Series job has been run:
-its prices, face ranges and refused options come from the developer docs and
-the pricing page.
+`credits_consumed`, and `--direct` (`image-to-model`) was not run either; it
+sends `input` because the docs give that field for it too. No P Series job has
+been run: its face ranges and P2-only `quad` come from the developer docs, its
+prices from the pricing page. The refused H Series options are an inference —
+the P Series docs do not list them, rather than documenting a rejection.
 
 The local validation rules — the `face_limit` ranges, `generate_parts` refusing
 textures and quads, `auto_size` needing a texture — are transcribed from the

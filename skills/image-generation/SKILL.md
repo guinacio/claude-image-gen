@@ -167,7 +167,8 @@ The default is not the only OpenAI choice. Any `gpt-image*` name is passed throu
 | `gpt-image-2.5-sunburst` | Base model, optimized for quality: higher image quality than `gpt-image-2`; OpenAI's most capable for generation and editing |
 | `gpt-image-2.5-flare` | Small model, optimized for speed, with quality comparable to `gpt-image-2` |
 | `gpt-image-2` | The CLI default |
-| `gpt-image-1.5`, `gpt-image-1` | Deprecated; OpenAI lists shutdown on 2026-12-01 and 2026-10-23 |
+| `gpt-image-1.5` | Deprecated; OpenAI lists shutdown on 2026-12-01 |
+| `gpt-image-1` | Shut down by OpenAI on 2026-10-23; do not use |
 
 Names ending in a date (`gpt-image-2.5-flare-2026-09-08`) are snapshots that pin one version so results stay reproducible. OpenAI suggests Flare when `gpt-image-2` quality is already enough and Sunburst where it falls short, and warns that speed and price differences depend on the workload. Tell the user which model you plan to use, and why, as part of the Confirm step.
 

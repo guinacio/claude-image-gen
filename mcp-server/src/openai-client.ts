@@ -124,7 +124,9 @@ export interface ObservedRejection {
  */
 const OBSERVED_MODEL_REJECTIONS: readonly ObservedRejection[] = [
   {
-    models: /^gpt-image-2/,
+    // gpt-image-2 and its dated snapshots only. A bare prefix would also catch
+    // the gpt-image-2.5 family, where this refusal was never observed.
+    models: /^gpt-image-2(-\d{4}-\d{2}-\d{2})?$/,
     option: 'background: "transparent"',
     apiMessage: "Transparent background is not supported for this model.",
   },

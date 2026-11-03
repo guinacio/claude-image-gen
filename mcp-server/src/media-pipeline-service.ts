@@ -253,6 +253,19 @@ export class MediaPipelineService {
       };
     }
 
+    // The generated image is only written after the provider has been paid for
+    // it, so an output path that saveImage would reject must fail here instead.
+    const outputPathCheck = this.imageStorage.checkOutputPath(request.outputPath);
+    if (!outputPathCheck.success) {
+      return {
+        success: false,
+        errorCode: outputPathCheck.errorCode,
+        error: outputPathCheck.error,
+        outputDirectory: this.imageStorage.getOutputDirectory(),
+        warnings,
+      };
+    }
+
     this.logger.info("Generating image", {
       provider,
       model: selectedModel,

@@ -79097,6 +79097,28 @@ var ImageStorage = class _ImageStorage {
       fs3.mkdirSync(dirPath, { recursive: true });
     }
   }
+  /**
+   * Checks that a custom output path stays within the output directory without
+   * writing anything. Callers run it before a paid generation request, so a bad
+   * path fails up front instead of discarding the generated image at save time.
+   * saveImage still runs the same check, since the filesystem can change between
+   * the two calls.
+   */
+  checkOutputPath(customPath) {
+    if (!customPath) {
+      return { success: true };
+    }
+    try {
+      this.assertPathWithinOutputDirectory(this.resolveCustomPath(customPath));
+      return { success: true };
+    } catch {
+      return {
+        success: false,
+        errorCode: "OUTPUT_PATH_NOT_ALLOWED",
+        error: _ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE
+      };
+    }
+  }
   saveImage(base64Data, customPath, mimeType = "image/png") {
     try {
       const filePath = this.resolveFilePath(customPath, mimeType);
@@ -79135,7 +79157,7 @@ var ImageStorage = class _ImageStorage {
       return path3.join(this.outputDir, `generated-${randomUUID()}${extension2}`);
     }
     const endsWithSeparator = /[\\/]$/.test(customPath);
-    let resolvedPath = path3.isAbsolute(customPath) ? path3.normalize(customPath) : path3.resolve(this.outputDir, customPath);
+    let resolvedPath = this.resolveCustomPath(customPath);
     this.assertPathWithinOutputDirectory(resolvedPath);
     const pathIsDirectory = endsWithSeparator || fs3.existsSync(resolvedPath) && fs3.statSync(resolvedPath).isDirectory();
     if (pathIsDirectory) {
@@ -79145,6 +79167,9 @@ var ImageStorage = class _ImageStorage {
     }
     this.assertPathWithinOutputDirectory(resolvedPath);
     return resolvedPath;
+  }
+  resolveCustomPath(customPath) {
+    return path3.isAbsolute(customPath) ? path3.normalize(customPath) : path3.resolve(this.outputDir, customPath);
   }
   /**
    * Ensures the file extension reflects the actual image format. A missing
@@ -79618,6 +79643,16 @@ var MediaPipelineService = class {
         prompt: request.prompt,
         aspectRatio: request.aspectRatio || "1:1",
         model: selectedModel,
+        outputDirectory: this.imageStorage.getOutputDirectory(),
+        warnings
+      };
+    }
+    const outputPathCheck = this.imageStorage.checkOutputPath(request.outputPath);
+    if (!outputPathCheck.success) {
+      return {
+        success: false,
+        errorCode: outputPathCheck.errorCode,
+        error: outputPathCheck.error,
         outputDirectory: this.imageStorage.getOutputDirectory(),
         warnings
       };

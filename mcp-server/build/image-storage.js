@@ -21,6 +21,29 @@ export class ImageStorage {
             fs.mkdirSync(dirPath, { recursive: true });
         }
     }
+    /**
+     * Checks that a custom output path stays within the output directory without
+     * writing anything. Callers run it before a paid generation request, so a bad
+     * path fails up front instead of discarding the generated image at save time.
+     * saveImage still runs the same check, since the filesystem can change between
+     * the two calls.
+     */
+    checkOutputPath(customPath) {
+        if (!customPath) {
+            return { success: true };
+        }
+        try {
+            this.assertPathWithinOutputDirectory(this.resolveCustomPath(customPath));
+            return { success: true };
+        }
+        catch {
+            return {
+                success: false,
+                errorCode: "OUTPUT_PATH_NOT_ALLOWED",
+                error: ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE,
+            };
+        }
+    }
     saveImage(base64Data, customPath, mimeType = "image/png") {
         try {
             const filePath = this.resolveFilePath(customPath, mimeType);
@@ -62,9 +85,7 @@ export class ImageStorage {
             return path.join(this.outputDir, `generated-${randomUUID()}${extension}`);
         }
         const endsWithSeparator = /[\\/]$/.test(customPath);
-        let resolvedPath = path.isAbsolute(customPath)
-            ? path.normalize(customPath)
-            : path.resolve(this.outputDir, customPath);
+        let resolvedPath = this.resolveCustomPath(customPath);
         this.assertPathWithinOutputDirectory(resolvedPath);
         const pathIsDirectory = endsWithSeparator ||
             (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory());
@@ -76,6 +97,11 @@ export class ImageStorage {
         }
         this.assertPathWithinOutputDirectory(resolvedPath);
         return resolvedPath;
+    }
+    resolveCustomPath(customPath) {
+        return path.isAbsolute(customPath)
+            ? path.normalize(customPath)
+            : path.resolve(this.outputDir, customPath);
     }
     /**
      * Ensures the file extension reflects the actual image format. A missing

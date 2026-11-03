@@ -470,3 +470,33 @@ test("createAsset still accepts a reference image larger than the mask limit", a
     removeDirectory(outputDirectory);
   }
 });
+
+test("createAsset rejects an output path outside the output directory before calling the provider", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+  const outsidePath = path.join(path.dirname(outputDirectory), "outside-image.png");
+
+  try {
+    const service = createService(
+      outputDirectory,
+      { OPENAI_API_KEY: "openai-key" },
+      {
+        clients: { openai: openaiClient },
+        fetchOpenAIModels: async () => ["gpt-image-2"],
+      }
+    );
+
+    const response = await service.createAsset({
+      prompt: "a friendly robot",
+      model: "gpt-image-2",
+      outputPath: outsidePath,
+    });
+
+    assert.equal(response.success, false);
+    assert.equal(response.errorCode, "OUTPUT_PATH_NOT_ALLOWED");
+    assert.equal(openaiClient.calls.length, 0);
+    assert.equal(fs.existsSync(outsidePath), false);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});

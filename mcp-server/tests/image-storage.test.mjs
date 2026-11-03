@@ -107,3 +107,40 @@ test("ImageStorage keeps the caller extension for unknown mime types", () => {
     removeDirectory(outputDirectory);
   }
 });
+
+test("ImageStorage checkOutputPath accepts paths inside the output directory without writing", () => {
+  const outputDirectory = createTempDirectory();
+  const storage = new ImageStorage(outputDirectory);
+
+  try {
+    assert.deepEqual(storage.checkOutputPath(), { success: true });
+    assert.deepEqual(storage.checkOutputPath("nested/image.png"), { success: true });
+    assert.deepEqual(
+      storage.checkOutputPath(path.join(outputDirectory, "image.png")),
+      { success: true }
+    );
+    assert.deepEqual(fs.readdirSync(outputDirectory), []);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("ImageStorage checkOutputPath rejects absolute and traversal paths outside the output directory", () => {
+  const outputDirectory = createTempDirectory();
+  const storage = new ImageStorage(outputDirectory);
+
+  try {
+    for (const outsidePath of [
+      path.join(path.dirname(outputDirectory), "outside-image.png"),
+      path.join("..", "outside-image.png"),
+    ]) {
+      assert.deepEqual(storage.checkOutputPath(outsidePath), {
+        success: false,
+        errorCode: "OUTPUT_PATH_NOT_ALLOWED",
+        error: "outputPath must stay within the configured output directory",
+      });
+    }
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});

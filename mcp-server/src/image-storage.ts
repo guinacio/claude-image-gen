@@ -27,6 +27,32 @@ export class ImageStorage {
     }
   }
 
+  /**
+   * Checks that a custom output path stays within the output directory without
+   * writing anything. Callers run it before a paid generation request, so a bad
+   * path fails up front instead of discarding the generated image at save time.
+   * saveImage still runs the same check, since the filesystem can change between
+   * the two calls.
+   */
+  checkOutputPath(
+    customPath?: string
+  ): { success: true } | { success: false; errorCode: string; error: string } {
+    if (!customPath) {
+      return { success: true };
+    }
+
+    try {
+      this.assertPathWithinOutputDirectory(this.resolveCustomPath(customPath));
+      return { success: true };
+    } catch {
+      return {
+        success: false,
+        errorCode: "OUTPUT_PATH_NOT_ALLOWED",
+        error: ImageStorage.OUTPUT_PATH_NOT_ALLOWED_MESSAGE,
+      };
+    }
+  }
+
   saveImage(
     base64Data: string,
     customPath?: string,
@@ -80,9 +106,7 @@ export class ImageStorage {
     }
 
     const endsWithSeparator = /[\\/]$/.test(customPath);
-    let resolvedPath = path.isAbsolute(customPath)
-      ? path.normalize(customPath)
-      : path.resolve(this.outputDir, customPath);
+    let resolvedPath = this.resolveCustomPath(customPath);
     this.assertPathWithinOutputDirectory(resolvedPath);
 
     const pathIsDirectory =
@@ -100,6 +124,12 @@ export class ImageStorage {
 
     this.assertPathWithinOutputDirectory(resolvedPath);
     return resolvedPath;
+  }
+
+  private resolveCustomPath(customPath: string): string {
+    return path.isAbsolute(customPath)
+      ? path.normalize(customPath)
+      : path.resolve(this.outputDir, customPath);
   }
 
   /**

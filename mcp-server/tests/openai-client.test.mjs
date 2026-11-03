@@ -110,16 +110,18 @@ test("resolveOutputOptions rejects transparency on a format without alpha", () =
 });
 
 test("findObservedRejection reports the recorded gpt-image-2 transparency refusal", () => {
-  const rejection = findObservedRejection("gpt-image-2", {
-    background: "transparent",
-  });
+  for (const model of ["gpt-image-2", "gpt-image-2-2026-04-21"]) {
+    const rejection = findObservedRejection(model, {
+      background: "transparent",
+    });
 
-  assert.ok(rejection, "expected a recorded rejection");
-  assert.match(rejection.option, /transparent/);
-  assert.equal(
-    rejection.apiMessage,
-    "Transparent background is not supported for this model."
-  );
+    assert.ok(rejection, `expected a recorded rejection for ${model}`);
+    assert.match(rejection.option, /transparent/);
+    assert.equal(
+      rejection.apiMessage,
+      "Transparent background is not supported for this model."
+    );
+  }
 });
 
 test("findObservedRejection stays silent for backgrounds that were never seen to fail", () => {
@@ -133,7 +135,14 @@ test("findObservedRejection stays silent for backgrounds that were never seen to
 });
 
 test("findObservedRejection does not generalise to unrecorded models", () => {
-  for (const model of ["gpt-image-1", "dall-e-3", undefined]) {
+  for (const model of [
+    "gpt-image-1",
+    "dall-e-3",
+    "gpt-image-2.5-sunburst",
+    "gpt-image-2.5-flare",
+    "gpt-image-2.5-flare-2026-09-08",
+    undefined,
+  ]) {
     assert.equal(
       findObservedRejection(model, { background: "transparent" }),
       undefined,

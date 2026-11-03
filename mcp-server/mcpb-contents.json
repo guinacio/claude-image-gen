@@ -1,8 +1,8 @@
 {
   "version": "1.2.3",
   "files": {
-    "build/bundle.js": "f805cfc9e59862af58d4fd7a0f61b813afae29f82645f52c8d4121bb7abd69ff",
-    "build/cli.bundle.js": "2e0fa6d9c2ce473dd5ca77b9aada43fffd4635339086693fabab09e5cb39acb8",
+    "build/bundle.js": "fc357b29cbd6ac6f1e8768d5e0598a61e6cfed9be548f27470bd51bf936ea4b8",
+    "build/cli.bundle.js": "4595544d8e45947f5b70ed34a8b928892468dc6814ddc1df4e4b272cb704e724",
     "icon.png": "281f09a4f22cc7f768ea9d0746020ebc68a464afeea31f74e4c18f6de140c281",
     "manifest.json": "86e2dffe299cb935259f36d0768cf146bffd473a7fe7c592e93e3cf062d56a58"
   }

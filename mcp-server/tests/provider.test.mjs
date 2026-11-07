@@ -73,3 +73,18 @@ test("createRuntimeConfig falls back to built-in defaults", () => {
   assert.equal(config.geminiDefaultModel, "gemini-3-pro-image");
   assert.equal(config.defaultProvider, "gemini");
 });
+
+test("createRuntimeConfig reads REQUEST_TIMEOUT_MS before the older Gemini-named variable", () => {
+  const cases = [
+    [{ REQUEST_TIMEOUT_MS: "300000" }, 300000],
+    [{ GEMINI_REQUEST_TIMEOUT_MS: "120000" }, 120000],
+    [{ REQUEST_TIMEOUT_MS: "300000", GEMINI_REQUEST_TIMEOUT_MS: "120000" }, 300000],
+    [{ REQUEST_TIMEOUT_MS: "  ", GEMINI_REQUEST_TIMEOUT_MS: "120000" }, 120000],
+    [{}, 60000],
+  ];
+
+  for (const [env, expected] of cases) {
+    const config = createRuntimeConfig({ GEMINI_API_KEY: "gemini-key", ...env });
+    assert.equal(config.requestTimeoutMs, expected, JSON.stringify(env));
+  }
+});

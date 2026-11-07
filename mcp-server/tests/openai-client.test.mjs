@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import OpenAI from "openai";
 import {
   OpenAIImageClient,
+  checkFormatSpecificOptions,
   describeOpenAIFailure,
   findObservedRejection,
   mapAspectRatioToOpenAISize,
@@ -185,6 +186,8 @@ test("generateImage uses the requested format when the response omits output_for
   for (const [outputFormat, expectedMimeType] of [
     ["jpeg", "image/jpeg"],
     ["webp", "image/webp"],
+    ["gif", "image/gif"],
+    ["svg", "image/svg+xml"],
   ]) {
     const client = new OpenAIImageClient({
       apiKey: "test-key",
@@ -234,4 +237,278 @@ test("generateImage rejects a mask that has no base image to repaint", async () 
   assert.equal(result.success, false);
   assert.equal(result.errorCode, "MASK_WITHOUT_REFERENCE_IMAGE");
   assert.match(result.error, /referenceImages/);
+});
+
+test("resolveOutputOptions rejects transparency on gif and svg", () => {
+  for (const outputFormat of ["gif", "svg"]) {
+    const result = resolveOutputOptions("transparent", outputFormat);
+    assert.match(result.error, /png or webp/, outputFormat);
+  }
+});
+
+test("checkFormatSpecificOptions accepts valid combinations", () => {
+  const validCases = [
+    { hasReferenceImages: false, hasMask: false },
+    { outputFormat: "gif", frameCount: 4, frameDurationMs: 100, hasReferenceImages: true, hasMask: false },
+    { outputFormat: "svg", hasReferenceImages: false, hasMask: false },
+    { outputFormat: "png", hasReferenceImages: true, hasMask: true },
+  ];
+
+  for (const input of validCases) {
+    assert.equal(checkFormatSpecificOptions(input), undefined, JSON.stringify(input));
+  }
+});
+
+test("checkFormatSpecificOptions rejects frame options without gif output", () => {
+  for (const outputFormat of [undefined, "png", "svg"]) {
+    const error = checkFormatSpecificOptions({
+      outputFormat,
+      frameCount: 4,
+      frameDurationMs: 100,
+      hasReferenceImages: false,
+      hasMask: false,
+    });
+    assert.match(error, /frameCount and frameDurationMs/, String(outputFormat));
+  }
+});
+
+test("checkFormatSpecificOptions rejects svg edits and masked gifs", () => {
+  assert.match(
+    checkFormatSpecificOptions({
+      outputFormat: "svg",
+      hasReferenceImages: true,
+      hasMask: false,
+    }),
+    /referenceImages/
+  );
+  assert.match(
+    checkFormatSpecificOptions({
+      outputFormat: "gif",
+      hasReferenceImages: true,
+      hasMask: true,
+    }),
+    /masks/
+  );
+});
+
+test("generateImage sends GIF frame options and complexity to the API", async () => {
+  const client = new OpenAIImageClient({
+    apiKey: "test-key",
+    requestTimeoutMs: 1000,
+  });
+  let sentRequest;
+
+  client.client = {
+    images: {
+      generate: async (request) => {
+        sentRequest = request;
+        return { output_format: "gif", data: [{ b64_json: "R0lGODlh" }] };
+      },
+    },
+  };
+
+  const result = await client.generateImage({
+    prompt: "a lantern swaying and returning to its starting pose",
+    model: "gpt-image-2.6-sunburst",
+    outputFormat: "gif",
+    frameCount: 12,
+    frameDurationMs: 150,
+    complexity: "low",
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.mimeType, "image/gif");
+  assert.equal(sentRequest.model, "gpt-image-2.6-sunburst");
+  assert.equal(sentRequest.output_format, "gif");
+  assert.equal(sentRequest.frame_count, 12);
+  assert.equal(sentRequest.frame_duration_ms, 150);
+  assert.equal(sentRequest.complexity, "low");
+});
+
+test("generateImage leaves the new options out of the request when omitted", async () => {
+  const client = new OpenAIImageClient({
+    apiKey: "test-key",
+    requestTimeoutMs: 1000,
+  });
+  let sentRequest;
+
+  client.client = {
+    images: {
+      generate: async (request) => {
+        sentRequest = request;
+        return { data: [{ b64_json: "aW1hZ2U=" }] };
+      },
+    },
+  };
+
+  await client.generateImage({ prompt: "a test image", model: "gpt-image-2" });
+
+  for (const key of ["output_format", "frame_count", "frame_duration_ms", "complexity"]) {
+    assert.equal(key in sentRequest, false, key);
+  }
+});
+
+test("generateImage sends an animated GIF edit through the edit endpoint", async () => {
+  const client = new OpenAIImageClient({
+    apiKey: "test-key",
+    requestTimeoutMs: 1000,
+  });
+  let sentRequest;
+
+  client.client = {
+    images: {
+      edit: async (request) => {
+        sentRequest = request;
+        return { data: [{ b64_json: "R0lGODlh" }] };
+      },
+    },
+  };
+
+  const result = await client.generateImage({
+    prompt: "make the character wave",
+    model: "gpt-image-2.6-flare",
+    outputFormat: "gif",
+    frameCount: 6,
+    referenceImages: [
+      { filePath: "character.png", base64Data: "aW1hZ2U=", mimeType: "image/png" },
+    ],
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.mimeType, "image/gif");
+  assert.equal(sentRequest.output_format, "gif");
+  assert.equal(sentRequest.frame_count, 6);
+});
+
+test("generateImage refuses incompatible format options before calling the API", async () => {
+  const cases = [
+    { outputFormat: "png", frameCount: 4 },
+    {
+      outputFormat: "svg",
+      referenceImages: [
+        { filePath: "logo.png", base64Data: "aW1hZ2U=", mimeType: "image/png" },
+      ],
+    },
+  ];
+
+  for (const options of cases) {
+    const client = new OpenAIImageClient({
+      apiKey: "test-key",
+      requestTimeoutMs: 1000,
+    });
+
+    client.client = {
+      images: {
+        generate: async () => {
+          throw new Error("the request must not reach the API");
+        },
+        edit: async () => {
+          throw new Error("the request must not reach the API");
+        },
+      },
+    };
+
+    const result = await client.generateImage({
+      prompt: "a test image",
+      model: "gpt-image-2.6-sunburst",
+      ...options,
+    });
+
+    assert.equal(result.success, false, JSON.stringify(options));
+    assert.equal(result.errorCode, "INCOMPATIBLE_OUTPUT_OPTIONS");
+  }
+});
+
+test("checkFormatSpecificOptions rejects SVG author options without svg output", () => {
+  for (const outputFormat of [undefined, "png", "gif"]) {
+    const error = checkFormatSpecificOptions({
+      outputFormat,
+      svgModel: "svg-author",
+      svgReasoningEffort: "high",
+      hasReferenceImages: false,
+      hasMask: false,
+    });
+    assert.match(error, /svgModel and svgReasoningEffort/, String(outputFormat));
+  }
+});
+
+test("checkFormatSpecificOptions requires svgModel for svgReasoningEffort", () => {
+  const error = checkFormatSpecificOptions({
+    outputFormat: "svg",
+    svgReasoningEffort: "high",
+    hasReferenceImages: false,
+    hasMask: false,
+  });
+
+  assert.match(error, /needs svgModel/);
+});
+
+test("generateImage sends the svg author object only when svgModel is set", async () => {
+  const cases = [
+    [{}, undefined],
+    [{ svgModel: "svg-author" }, { model: "svg-author" }],
+    [
+      { svgModel: "svg-author", svgReasoningEffort: "low" },
+      { model: "svg-author", reasoning: { effort: "low" } },
+    ],
+  ];
+
+  for (const [options, expectedSvg] of cases) {
+    const client = new OpenAIImageClient({
+      apiKey: "test-key",
+      requestTimeoutMs: 1000,
+    });
+    let sentRequest;
+
+    client.client = {
+      images: {
+        generate: async (request) => {
+          sentRequest = request;
+          return { output_format: "svg", data: [{ b64_json: "PHN2Zy8+" }] };
+        },
+      },
+    };
+
+    const result = await client.generateImage({
+      prompt: "a flat lantern logo",
+      model: "gpt-image-2.6-flare",
+      outputFormat: "svg",
+      ...options,
+    });
+
+    assert.equal(result.success, true, JSON.stringify(options));
+    assert.equal(result.mimeType, "image/svg+xml");
+    assert.equal(sentRequest.output_format, "svg");
+    assert.deepEqual(sentRequest.svg, expectedSvg, JSON.stringify(options));
+  }
+});
+
+test("generateImage sends an explicit size instead of the aspect ratio mapping", async () => {
+  const client = new OpenAIImageClient({
+    apiKey: "test-key",
+    requestTimeoutMs: 1000,
+  });
+  let sentRequest;
+
+  client.client = {
+    images: {
+      generate: async (request) => {
+        sentRequest = request;
+        return { data: [{ b64_json: "R0lGODlh" }] };
+      },
+    },
+  };
+
+  const result = await client.generateImage({
+    prompt: "a walking knight",
+    model: "gpt-image-2.6-sunburst",
+    aspectRatio: "16:9",
+    size: "960x960",
+    outputFormat: "gif",
+    frameCount: 16,
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(sentRequest.size, "960x960");
+  assert.equal(result.warnings, undefined);
 });

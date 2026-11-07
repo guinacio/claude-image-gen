@@ -14,15 +14,44 @@ export const IMAGE_BACKGROUNDS = ["auto", "transparent", "opaque"] as const;
 
 export type ImageBackground = (typeof IMAGE_BACKGROUNDS)[number];
 
-export const IMAGE_OUTPUT_FORMATS = ["png", "jpeg", "webp"] as const;
+export const IMAGE_OUTPUT_FORMATS = ["png", "jpeg", "webp", "gif", "svg"] as const;
 
 export type ImageOutputFormat = (typeof IMAGE_OUTPUT_FORMATS)[number];
 
-/** Formats that can carry an alpha channel, and therefore a transparent background. */
+/**
+ * Formats that can carry an alpha channel, and therefore a transparent
+ * background. OpenAI documents transparent backgrounds as needing png or webp,
+ * so gif and svg stay out even though both can express transparency.
+ */
 export const ALPHA_CAPABLE_OUTPUT_FORMATS: readonly ImageOutputFormat[] = [
   "png",
   "webp",
 ];
+
+/** How much planning the model spends on an image, separate from rendering quality. */
+export const IMAGE_COMPLEXITIES = ["low", "medium", "high"] as const;
+
+export type ImageComplexity = (typeof IMAGE_COMPLEXITIES)[number];
+
+/** Reasoning effort for the model that authors SVG output. Which ones work depends on that model. */
+export const SVG_REASONING_EFFORTS = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+
+export type SvgReasoningEffort = (typeof SVG_REASONING_EFFORTS)[number];
+
+/** "auto" or WIDTHxHEIGHT; the API checks the model-specific limits. */
+export const OPENAI_SIZE_PATTERN = /^(auto|[1-9]\d{1,4}x[1-9]\d{1,4})$/;
+
+/** Frame limits for animated GIF output, as documented for the OpenAI Image API. */
+export const GIF_FRAME_COUNT_RANGE = { min: 2, max: 16 } as const;
+export const GIF_FRAME_DURATION_MS_RANGE = { min: 20, max: 2000 } as const;
 
 // Used only when Gemini model discovery fails. These are current GA image
 // models: gemini-3-pro-image-preview shut down on 2026-06-25, and
@@ -57,6 +86,17 @@ export interface GenerateImageInput {
   aspectRatio?: AspectRatio;
   background?: ImageBackground;
   outputFormat?: ImageOutputFormat;
+  complexity?: ImageComplexity;
+  /** Number of frames in an animated GIF. Only valid with outputFormat "gif". */
+  frameCount?: number;
+  /** Delay per animated GIF frame, in milliseconds. Only valid with outputFormat "gif". */
+  frameDurationMs?: number;
+  /** Model that authors the SVG from the image model's reference. Only valid with outputFormat "svg". */
+  svgModel?: string;
+  /** Reasoning effort for svgModel. Requires svgModel. */
+  svgReasoningEffort?: SvgReasoningEffort;
+  /** Exact OpenAI size ("auto" or WIDTHxHEIGHT). Overrides the aspectRatio mapping. */
+  size?: string;
   model?: GeminiModel;
   timeoutMs?: number;
 }
@@ -108,6 +148,12 @@ export interface CreateAssetRequest {
   aspectRatio?: AspectRatio;
   background?: ImageBackground;
   outputFormat?: ImageOutputFormat;
+  complexity?: ImageComplexity;
+  frameCount?: number;
+  frameDurationMs?: number;
+  svgModel?: string;
+  svgReasoningEffort?: SvgReasoningEffort;
+  size?: string;
   model?: GeminiModel;
 }
 
@@ -118,6 +164,8 @@ export interface CreateAssetResponse {
   mimeType?: string;
   prompt?: string;
   aspectRatio?: AspectRatio;
+  /** Set instead of aspectRatio when the request named an exact size. */
+  size?: string;
   model?: GeminiModel;
   outputDirectory?: string;
   error?: string;

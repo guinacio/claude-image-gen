@@ -52,6 +52,43 @@ export function resolveOutputOptions(background, outputFormat) {
     return { background, outputFormat: outputFormat ?? "png" };
 }
 /**
+ * Rejects option combinations that the OpenAI Image API documents as invalid,
+ * so they fail locally with a clear reason instead of as an API error:
+ * - frameCount and frameDurationMs only exist for GIF output;
+ * - SVG output is generation-only (the edit endpoint has no SVG format), and
+ *   referenceImages always go to the edit endpoint;
+ * - GIF output does not support masks;
+ * - svgModel and svgReasoningEffort only exist for SVG output, and the API's
+ *   svg object requires a model, so an effort alone has nowhere to go.
+ * Returns undefined when the combination is valid.
+ */
+export function checkFormatSpecificOptions(input) {
+    const frameOptions = [
+        input.frameCount !== undefined ? "frameCount" : undefined,
+        input.frameDurationMs !== undefined ? "frameDurationMs" : undefined,
+    ].filter((option) => option !== undefined);
+    if (frameOptions.length > 0 && input.outputFormat !== "gif") {
+        return `${frameOptions.join(" and ")} only apply to animated GIF output; set outputFormat to "gif".`;
+    }
+    const svgOptions = [
+        input.svgModel ? "svgModel" : undefined,
+        input.svgReasoningEffort ? "svgReasoningEffort" : undefined,
+    ].filter((option) => option !== undefined);
+    if (svgOptions.length > 0 && input.outputFormat !== "svg") {
+        return `${svgOptions.join(" and ")} only apply to SVG output; set outputFormat to "svg".`;
+    }
+    if (input.svgReasoningEffort && !input.svgModel) {
+        return "svgReasoningEffort sets the effort of the model that authors the SVG, so it needs svgModel too.";
+    }
+    if (input.outputFormat === "svg" && input.hasReferenceImages) {
+        return 'SVG output is only available when generating from a prompt; OpenAI does not support it for edits, which is how referenceImages are sent.';
+    }
+    if (input.outputFormat === "gif" && input.hasMask) {
+        return "GIF output does not support masks.";
+    }
+    return undefined;
+}
+/**
  * Options that a given model is known to reject, recorded from real API
  * responses.
  *
@@ -140,6 +177,10 @@ function mimeTypeForOutputFormat(outputFormat) {
             return "image/webp";
         case "png":
             return "image/png";
+        case "gif":
+            return "image/gif";
+        case "svg":
+            return "image/svg+xml";
         default:
             return "image/png";
     }
@@ -160,7 +201,12 @@ export class OpenAIImageClient {
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         try {
             const modelName = input.model;
-            const { size, warning } = mapAspectRatioToOpenAISize(input.aspectRatio);
+            // An explicit size wins over the aspect ratio mapping, which only knows
+            // the three standard sizes. Its limits are model-specific, so the API
+            // checks them.
+            const mapped = mapAspectRatioToOpenAISize(input.aspectRatio);
+            const size = input.size ?? mapped.size;
+            const warning = input.size ? undefined : mapped.warning;
             const warnings = warning ? [warning] : undefined;
             const requestOptions = {
                 timeout: timeoutMs,
@@ -186,6 +232,23 @@ export class OpenAIImageClient {
                     warnings,
                 };
             }
+            const formatError = checkFormatSpecificOptions({
+                outputFormat: outputOptions.outputFormat,
+                frameCount: input.frameCount,
+                frameDurationMs: input.frameDurationMs,
+                svgModel: input.svgModel,
+                svgReasoningEffort: input.svgReasoningEffort,
+                hasReferenceImages,
+                hasMask: Boolean(input.mask),
+            });
+            if (formatError) {
+                return {
+                    success: false,
+                    errorCode: "INCOMPATIBLE_OUTPUT_OPTIONS",
+                    error: formatError,
+                    warnings,
+                };
+            }
             const rejection = findObservedRejection(modelName, {
                 background: outputOptions.background,
             });
@@ -199,6 +262,8 @@ export class OpenAIImageClient {
             }
             // gpt-image models always return base64 payloads, so response_format is
             // never sent. input_fidelity is left to the model default as well.
+            // output_format is added per endpoint below, since only generation
+            // accepts svg.
             const sharedOptions = {
                 model: modelName,
                 prompt: input.prompt,
@@ -206,10 +271,15 @@ export class OpenAIImageClient {
                 ...(outputOptions.background
                     ? { background: outputOptions.background }
                     : {}),
-                ...(outputOptions.outputFormat
-                    ? { output_format: outputOptions.outputFormat }
+                ...(input.complexity ? { complexity: input.complexity } : {}),
+                ...(input.frameCount !== undefined
+                    ? { frame_count: input.frameCount }
+                    : {}),
+                ...(input.frameDurationMs !== undefined
+                    ? { frame_duration_ms: input.frameDurationMs }
                     : {}),
             };
+            const outputFormat = outputOptions.outputFormat;
             let response;
             if (hasReferenceImages) {
                 const image = await Promise.all(input.referenceImages.map((ref) => toFile(Buffer.from(ref.base64Data, "base64"), basename(ref.filePath), {
@@ -218,14 +288,32 @@ export class OpenAIImageClient {
                 const mask = input.mask
                     ? await toFile(Buffer.from(input.mask.base64Data, "base64"), basename(input.mask.filePath), { type: input.mask.mimeType })
                     : undefined;
+                // checkFormatSpecificOptions already refused svg alongside
+                // referenceImages, so the edit endpoint never sees it.
+                const editFormat = outputFormat === "svg" ? undefined : outputFormat;
                 response = await this.client.images.edit({
                     ...sharedOptions,
                     image,
                     ...(mask ? { mask } : {}),
+                    ...(editFormat ? { output_format: editFormat } : {}),
                 }, requestOptions);
             }
             else {
-                response = await this.client.images.generate(sharedOptions, requestOptions);
+                // The svg object is only sent when a model is named: accounts without
+                // SVG model selection must omit it, and the plain svg format still works.
+                const svg = input.svgModel
+                    ? {
+                        model: input.svgModel,
+                        ...(input.svgReasoningEffort
+                            ? { reasoning: { effort: input.svgReasoningEffort } }
+                            : {}),
+                    }
+                    : undefined;
+                response = await this.client.images.generate({
+                    ...sharedOptions,
+                    ...(outputFormat ? { output_format: outputFormat } : {}),
+                    ...(svg ? { svg } : {}),
+                }, requestOptions);
             }
             const base64Data = response.data?.[0]?.b64_json;
             if (!base64Data) {
@@ -239,7 +327,7 @@ export class OpenAIImageClient {
             return {
                 success: true,
                 base64Data,
-                mimeType: mimeTypeForOutputFormat(response.output_format ?? outputOptions.outputFormat),
+                mimeType: mimeTypeForOutputFormat(response.output_format ?? outputFormat),
                 warnings,
             };
         }

@@ -86,6 +86,15 @@ GEMINI_API_KEY=your-api-key-here node build/cli.bundle.js \
 The CLI routes to Gemini or OpenAI based on the model name and returns structured JSON on stdout. It does not require the MCP server layer.
 Any custom output path must still remain inside the configured output directory.
 
+To run the CLI from any folder, install it as a command from the repository root:
+
+```bash
+npm install -g ./mcp-server
+media-pipeline-cli --help
+```
+
+Installing a local folder globally links to it, so later builds of the clone are picked up without reinstalling. The CLI reads its settings from environment variables (see [Configuration](#configuration)), so set at least one API key in your shell or system environment.
+
 #### 3. Add to Claude Code
 
 **Option A: Using MCP server**
@@ -132,6 +141,8 @@ If not using the plugin:
 ```bash
 cp -r skills/image-generation ~/.claude/skills/
 ```
+
+Outside the plugin, the skill runs the `media-pipeline-cli` command, so install the CLI as a command first (step 2).
 
 #### 5. Install a Specialized Workflow (Optional)
 

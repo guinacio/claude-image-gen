@@ -39,6 +39,12 @@ node "${CLAUDE_PLUGIN_ROOT}/mcp-server/build/cli.bundle.js" \
   --aspect-ratio "16:9"
 ```
 
+`CLAUDE_PLUGIN_ROOT` is only set when the skill comes from the plugin. When the skill was copied into `~/.claude/skills` instead, run the `media-pipeline-cli` command with the same flags; it is installed with `npm install -g ./mcp-server` from a clone of the repository:
+
+```bash
+media-pipeline-cli --prompt "Your detailed image description" --output "./path/to/output.png"
+```
+
 ### Parameters
 
 | Flag | Required | Default | Description |

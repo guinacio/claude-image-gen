@@ -23,7 +23,13 @@ Options:
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
       --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
   -b, --background <mode>    auto, transparent or opaque (OpenAI only)
-  -f, --output-format <fmt>  png, jpeg or webp (OpenAI only)
+  -f, --output-format <fmt>  png, jpeg, webp, gif (animated) or svg (OpenAI only)
+      --complexity <level>   low, medium or high planning effort (OpenAI only)
+      --frame-count <n>      GIF frames, 2-16 (requires --output-format gif)
+      --frame-duration-ms <ms>  Delay per GIF frame, 20-2000 ms (requires --output-format gif)
+      --size <WxH|auto>      Exact OpenAI size, overriding --aspect-ratio (e.g. 720x720 for a 16-frame GIF)
+      --svg-model <model>   Model that authors the SVG (requires --output-format svg and SVG model selection)
+      --svg-reasoning-effort <level>  none, minimal, low, medium, high, xhigh or max (requires --svg-model)
   -d, --output-dir <dir>     Output directory (default: current directory)
   -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
@@ -44,7 +50,12 @@ Examples:
   node build/cli.bundle.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
   node build/cli.bundle.js -p "Product photo" --model gpt-image-2 -o "./product.png"
   node build/cli.bundle.js -p "Logo variant" -r "./ref1.png,./ref2.png" -r "./ref3.png"
+  node build/cli.bundle.js -p "A lantern swaying, looping back to the start" --model gpt-image-2.6-sunburst -f gif --frame-count 12
 `);
+}
+/** Converts an optional numeric flag; NaN is left for schema validation to reject. */
+function parseOptionalNumber(value) {
+    return value === undefined ? undefined : Number(value);
 }
 async function main() {
     try {
@@ -58,6 +69,12 @@ async function main() {
                 mask: { type: "string" },
                 background: { type: "string", short: "b" },
                 "output-format": { type: "string", short: "f" },
+                complexity: { type: "string" },
+                "frame-count": { type: "string" },
+                "frame-duration-ms": { type: "string" },
+                size: { type: "string" },
+                "svg-model": { type: "string" },
+                "svg-reasoning-effort": { type: "string" },
                 "output-dir": { type: "string", short: "d" },
                 "timeout-ms": { type: "string", short: "t" },
                 "log-level": { type: "string", short: "l" },
@@ -84,6 +101,12 @@ async function main() {
             mask: values.mask,
             background: values.background,
             outputFormat: values["output-format"],
+            complexity: values.complexity,
+            frameCount: parseOptionalNumber(values["frame-count"]),
+            frameDurationMs: parseOptionalNumber(values["frame-duration-ms"]),
+            svgModel: values["svg-model"],
+            svgReasoningEffort: values["svg-reasoning-effort"],
+            size: values.size,
         });
         if (!parsedArgs.success) {
             console.log(JSON.stringify({

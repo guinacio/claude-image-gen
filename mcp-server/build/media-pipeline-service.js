@@ -141,6 +141,11 @@ export class MediaPipelineService {
     }
     async createAsset(request) {
         const startedAt = Date.now();
+        // An explicit size replaces the aspect ratio mapping, so the response
+        // reports the size that was sent rather than an aspect ratio that wasn't.
+        const shape = request.size
+            ? { size: request.size }
+            : { aspectRatio: request.aspectRatio || "1:1" };
         const modelContext = await this.getModelContext();
         const warnings = [...modelContext.warnings];
         if (request.model && !modelContext.availableModels.includes(request.model)) {
@@ -161,7 +166,7 @@ export class MediaPipelineService {
                 errorCode: "PROVIDER_NOT_CONFIGURED",
                 error: `Model ${selectedModel} requires ${provider} but ${getApiKeyEnvVarForProvider(provider)} is not set.`,
                 prompt: request.prompt,
-                aspectRatio: request.aspectRatio || "1:1",
+                ...shape,
                 model: selectedModel,
                 outputDirectory: this.imageStorage.getOutputDirectory(),
                 warnings,
@@ -182,7 +187,7 @@ export class MediaPipelineService {
         this.logger.info("Generating image", {
             provider,
             model: selectedModel,
-            aspectRatio: request.aspectRatio || "1:1",
+            ...shape,
             hasCustomOutputPath: Boolean(request.outputPath),
         });
         // Load reference images from disk if provided
@@ -263,6 +268,12 @@ export class MediaPipelineService {
             aspectRatio: request.aspectRatio,
             background: request.background,
             outputFormat: request.outputFormat,
+            complexity: request.complexity,
+            frameCount: request.frameCount,
+            frameDurationMs: request.frameDurationMs,
+            svgModel: request.svgModel,
+            svgReasoningEffort: request.svgReasoningEffort,
+            size: request.size,
             model: selectedModel,
             timeoutMs: this.config.requestTimeoutMs,
         });
@@ -282,7 +293,7 @@ export class MediaPipelineService {
                 errorCode: generated.errorCode || "IMAGE_GENERATION_FAILED",
                 error: generated.error || "Image generation failed",
                 prompt: request.prompt,
-                aspectRatio: request.aspectRatio || "1:1",
+                ...shape,
                 model: selectedModel,
                 outputDirectory: this.imageStorage.getOutputDirectory(),
                 warnings,
@@ -301,7 +312,7 @@ export class MediaPipelineService {
                 errorCode: saved.errorCode || "FILE_SAVE_FAILED",
                 error: saved.error || "Failed to save generated image",
                 prompt: request.prompt,
-                aspectRatio: request.aspectRatio || "1:1",
+                ...shape,
                 model: selectedModel,
                 mimeType: generated.mimeType,
                 outputDirectory: this.imageStorage.getOutputDirectory(),
@@ -321,7 +332,7 @@ export class MediaPipelineService {
             resourceUri: pathToFileURL(saved.filePath).href,
             mimeType: generated.mimeType,
             prompt: request.prompt,
-            aspectRatio: request.aspectRatio || "1:1",
+            ...shape,
             model: selectedModel,
             outputDirectory: this.imageStorage.getOutputDirectory(),
             warnings: warnings.length > 0 ? warnings : undefined,

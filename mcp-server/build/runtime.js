@@ -81,7 +81,9 @@ export function createRuntimeConfig(env = process.env) {
         openaiDefaultModel: env.OPENAI_DEFAULT_MODEL?.trim() || FALLBACK_OPENAI_IMAGE_MODELS[0],
         defaultProvider: parseImageProvider(env.IMAGE_PROVIDER, geminiApiKey, openaiApiKey),
         outputDirectory: resolveOutputDirectory(env.IMAGE_OUTPUT_DIR),
-        requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
+        // REQUEST_TIMEOUT_MS applies to both providers; the older
+        // GEMINI_REQUEST_TIMEOUT_MS name is still read when it is unset.
+        requestTimeoutMs: parseRequestTimeoutMs(env.REQUEST_TIMEOUT_MS?.trim() || env.GEMINI_REQUEST_TIMEOUT_MS),
         logLevel: parseLogLevel(env.MEDIA_PIPELINE_LOG_LEVEL),
     };
 }

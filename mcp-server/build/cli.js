@@ -35,7 +35,8 @@ Environment:
   GEMINI_DEFAULT_MODEL       Preferred default model (optional)
   OPENAI_DEFAULT_MODEL       Preferred default OpenAI model (optional, default gpt-image-2)
   IMAGE_PROVIDER             gemini or openai — provider used when --model is omitted (optional)
-  GEMINI_REQUEST_TIMEOUT_MS  Request timeout in milliseconds (optional)
+  REQUEST_TIMEOUT_MS         Request timeout in milliseconds, both providers (optional;
+                             GEMINI_REQUEST_TIMEOUT_MS is still read when unset)
   IMAGE_OUTPUT_DIR           Default output directory (overridden by --output-dir)
   MEDIA_PIPELINE_LOG_LEVEL   Logging level for stderr diagnostics (optional)
 
@@ -98,8 +99,8 @@ async function main() {
             IMAGE_OUTPUT_DIR: values["output-dir"] ??
                 process.env.IMAGE_OUTPUT_DIR ??
                 process.cwd(),
-            GEMINI_REQUEST_TIMEOUT_MS: values["timeout-ms"] ||
-                process.env.GEMINI_REQUEST_TIMEOUT_MS,
+            REQUEST_TIMEOUT_MS: values["timeout-ms"] ||
+                process.env.REQUEST_TIMEOUT_MS,
             MEDIA_PIPELINE_LOG_LEVEL: values["log-level"] ||
                 process.env.MEDIA_PIPELINE_LOG_LEVEL,
         });

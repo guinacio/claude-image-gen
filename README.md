@@ -12,7 +12,7 @@ AI-powered image generation using Google Gemini or OpenAI (gpt-image-2), integra
 - Configurable aspect ratios (1:1, 16:9, 9:16, etc.)
 - Multiple model support (quality vs speed) across both providers
 - Optional reference images to guide generation (up to 5, PNG/JPEG/WebP) on both providers
-- Inpainting with a PNG mask, plus `background` and `outputFormat` control, on OpenAI models
+- Inpainting with a PNG mask, plus `background` and `outputFormat` control (including animated GIF and SVG), on OpenAI models
 - Images saved to disk within the configured output directory, with file paths returned
 - MCP server speaks the MCP 2026-07-28 spec, with backward compatibility for older MCP clients
 
@@ -211,12 +211,17 @@ The server is dual-provider: it routes each request to Google Gemini or OpenAI (
 
 - **Aspect ratios on OpenAI**: OpenAI image models only support `1024x1024`, `1536x1024`, and `1024x1536`. Requested aspect ratios are mapped to the nearest supported size, and if the mapping isn't exact the response includes a warning describing the substitution.
 - **Reference images**: supported on both providers — pass up to 5 reference image paths to guide generation.
-- **`mask`, `background`, `outputFormat`**: OpenAI models only — Gemini models reject them.
+- **`size`**: OpenAI models only. An exact `WIDTHxHEIGHT` (or `auto`) that replaces the aspect ratio mapping above; OpenAI documents arbitrary sizes for `gpt-image-2` and later, with both sides divisible by 16.
+- **`mask`, `background`, `outputFormat`, `complexity`, `frameCount`, `frameDurationMs`, `svgModel`, `svgReasoningEffort`**: OpenAI models only — Gemini models reject them.
   - `mask` takes an absolute path to a PNG whose transparent areas are the region the model repaints; everything else is preserved from the base image. It requires `referenceImages`, and [OpenAI documents](https://developers.openai.com/api/docs/guides/image-generation) the mask as needing an alpha channel and the same dimensions as the base image. Checked locally: the file really is a PNG, it is under the API's 4MB mask limit (masks are capped well below reference images, whose limit here is 20MB), and it is not fully opaque — an opaque mask marks nothing, so it is rejected before the request is sent. Left to the API: the dimension match, and whether a PNG carrying transparency in a `tRNS` chunk instead of an alpha channel is accepted — that case is sent with a warning rather than blocked.
   - `background` (`auto`, `transparent`, `opaque`) chooses how the background is handled. `transparent` needs an alpha-capable `outputFormat`, so `png` is selected automatically when `outputFormat` is omitted. `gpt-image-2` rejects `transparent`, and that combination is refused before the request is sent.
-  - `outputFormat` (`png`, `jpeg`, `webp`) sets the encoding of the returned image; `jpeg` cannot carry transparency.
+  - `outputFormat` (`png`, `jpeg`, `webp`, `gif`, `svg`) sets the encoding of the returned image. OpenAI documents transparency for `png` and `webp` only, so the other three are refused alongside `background: "transparent"`.
+    - `gif` returns an animated GIF. `frameCount` (2–16, OpenAI default 9) and `frameDurationMs` (20–2000 ms, OpenAI default 200) shape it and are refused with any other format; the motion and how it loops go in the prompt. GIF output does not take a `mask`. The frames are laid out on one sheet limited to 3840 px per edge and to the pixel count of 3840x2160, so 16 frames at the default 1024x1024 are refused; `size: "720x720"` worked in testing, and 960x960 did not.
+    - `svg` returns a vector image. It is generation-only, so it is refused alongside `referenceImages`. The image model creates a reference image and an author model turns it into the SVG; `svgModel` picks that author and `svgReasoningEffort` (`none` through `max`) its effort; both are refused with any other format. On accounts with SVG model selection the API requires `svgModel` — verified with `gpt-image-2.6-sunburst`, which refused SVG without it and produced one with `gpt-5.5` as the author in about 2.5 minutes, so raise `GEMINI_REQUEST_TIMEOUT_MS` above its 60 s default for SVG. Accounts without SVG model selection must leave both out.
+    - OpenAI documents both for the `gpt-image-2.6-flare` and `gpt-image-2.6-sunburst` models, and GIF may need preview access on the account.
+  - `complexity` (`low`, `medium`, `high`) sets how much the model plans the image, separately from rendering quality. The 2.6 models default to `high`.
 
-  Apart from the `gpt-image-2`/`transparent` case above, these three options have not been verified against a live API — when a model refuses one, the API's own reason is returned.
+  Apart from the `gpt-image-2`/`transparent` case above, these options have not been verified against a live API — when a model refuses one, the API's own reason is returned.
 
 ### Models
 

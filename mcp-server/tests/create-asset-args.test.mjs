@@ -40,7 +40,61 @@ test("createAssetArgsSchema rejects an unknown background", () => {
 test("createAssetArgsSchema rejects an unknown output format", () => {
   const parsed = createAssetArgsSchema.safeParse({
     ...basePrompt,
+    outputFormat: "bmp",
+  });
+
+  assert.equal(parsed.success, false);
+});
+
+test("createAssetArgsSchema accepts animated GIF options and complexity", () => {
+  const parsed = createAssetArgsSchema.safeParse({
+    ...basePrompt,
     outputFormat: "gif",
+    frameCount: 12,
+    frameDurationMs: 150,
+    complexity: "medium",
+  });
+
+  assert.ok(parsed.success, parsed.error?.issues?.[0]?.message);
+  assert.equal(parsed.data.outputFormat, "gif");
+  assert.equal(parsed.data.frameCount, 12);
+  assert.equal(parsed.data.frameDurationMs, 150);
+  assert.equal(parsed.data.complexity, "medium");
+});
+
+test("createAssetArgsSchema accepts svg output", () => {
+  const parsed = createAssetArgsSchema.safeParse({
+    ...basePrompt,
+    outputFormat: "svg",
+  });
+
+  assert.ok(parsed.success, parsed.error?.issues?.[0]?.message);
+});
+
+test("createAssetArgsSchema enforces the documented GIF frame ranges", () => {
+  const invalidCases = [
+    { frameCount: 1 },
+    { frameCount: 17 },
+    { frameCount: 4.5 },
+    { frameCount: Number.NaN },
+    { frameDurationMs: 10 },
+    { frameDurationMs: 2001 },
+  ];
+
+  for (const options of invalidCases) {
+    const parsed = createAssetArgsSchema.safeParse({
+      ...basePrompt,
+      outputFormat: "gif",
+      ...options,
+    });
+    assert.equal(parsed.success, false, JSON.stringify(options));
+  }
+});
+
+test("createAssetArgsSchema rejects an unknown complexity", () => {
+  const parsed = createAssetArgsSchema.safeParse({
+    ...basePrompt,
+    complexity: "extreme",
   });
 
   assert.equal(parsed.success, false);
@@ -50,4 +104,40 @@ test("createAssetArgsSchema rejects an empty mask path", () => {
   const parsed = createAssetArgsSchema.safeParse({ ...basePrompt, mask: "   " });
 
   assert.equal(parsed.success, false);
+});
+
+test("createAssetArgsSchema accepts the SVG author options", () => {
+  const parsed = createAssetArgsSchema.safeParse({
+    ...basePrompt,
+    outputFormat: "svg",
+    svgModel: "svg-author",
+    svgReasoningEffort: "xhigh",
+  });
+
+  assert.ok(parsed.success, parsed.error?.issues?.[0]?.message);
+  assert.equal(parsed.data.svgModel, "svg-author");
+  assert.equal(parsed.data.svgReasoningEffort, "xhigh");
+});
+
+test("createAssetArgsSchema rejects an empty svgModel and an unknown effort", () => {
+  for (const options of [{ svgModel: "  " }, { svgModel: "svg-author", svgReasoningEffort: "extreme" }]) {
+    const parsed = createAssetArgsSchema.safeParse({
+      ...basePrompt,
+      outputFormat: "svg",
+      ...options,
+    });
+    assert.equal(parsed.success, false, JSON.stringify(options));
+  }
+});
+
+test("createAssetArgsSchema accepts auto and WIDTHxHEIGHT sizes only", () => {
+  for (const size of ["auto", "960x960", "1536x864"]) {
+    const parsed = createAssetArgsSchema.safeParse({ ...basePrompt, size });
+    assert.ok(parsed.success, size);
+  }
+
+  for (const size of ["960", "960X960", "0x960", "big", "960x960x2"]) {
+    const parsed = createAssetArgsSchema.safeParse({ ...basePrompt, size });
+    assert.equal(parsed.success, false, size);
+  }
 });

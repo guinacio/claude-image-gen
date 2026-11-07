@@ -64,13 +64,19 @@ export class GeminiImageClient {
     try {
       const modelName = input.model || this.config.defaultModel;
 
-      // mask, background and outputFormat are OpenAI image-API options with no
-      // Gemini equivalent. Refuse them explicitly: silently dropping them would
-      // return an image that quietly ignores what the caller asked for.
+      // These are OpenAI image-API options with no Gemini equivalent. Refuse
+      // them explicitly: silently dropping them would return an image that
+      // quietly ignores what the caller asked for.
       const unsupportedOptions = [
         input.mask ? "mask" : undefined,
         input.background ? "background" : undefined,
         input.outputFormat ? "outputFormat" : undefined,
+        input.complexity ? "complexity" : undefined,
+        input.frameCount !== undefined ? "frameCount" : undefined,
+        input.frameDurationMs !== undefined ? "frameDurationMs" : undefined,
+        input.svgModel ? "svgModel" : undefined,
+        input.svgReasoningEffort ? "svgReasoningEffort" : undefined,
+        input.size ? "size" : undefined,
       ].filter((option): option is string => option !== undefined);
 
       if (unsupportedOptions.length > 0) {

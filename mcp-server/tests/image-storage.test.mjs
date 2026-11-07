@@ -72,6 +72,29 @@ test("ImageStorage corrects a file extension that does not match the image mime 
   }
 });
 
+test("ImageStorage saves GIF and SVG output with their own extensions", () => {
+  const outputDirectory = createTempDirectory();
+  const storage = new ImageStorage(outputDirectory);
+
+  try {
+    for (const [mimeType, expectedName] of [
+      ["image/gif", "lantern.gif"],
+      ["image/svg+xml", "lantern.svg"],
+    ]) {
+      const result = storage.saveImage(
+        Buffer.from("image-bytes").toString("base64"),
+        "lantern.png",
+        mimeType
+      );
+
+      assert.equal(result.success, true);
+      assert.equal(path.basename(result.filePath), expectedName);
+    }
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
 test("ImageStorage keeps equivalent extensions for the same mime type", () => {
   const outputDirectory = createTempDirectory();
   const storage = new ImageStorage(outputDirectory);

@@ -125,6 +125,14 @@ Add to your Claude Code config (`~/.claude.json`):
 
 The `${VAR:-default}` syntax uses environment variables with fallback defaults.
 
+**Running Claude Code inside the clone:** the repository's own `.mcp.json` is the plugin's server definition, and its path uses `${CLAUDE_PLUGIN_ROOT}`, which is only set when the repository is installed as a plugin. In a session opened in the clone, Claude Code loads it as a project server that takes the place of the `media-pipeline` server configured above, and it fails with `Cannot find module '…${CLAUDE_PLUGIN_ROOT}…bundle.js'`. To keep using your own config there, disable the project server in `.claude/settings.local.json` (ignored by git) and restart Claude Code:
+
+```json
+{
+  "disabledMcpjsonServers": ["media-pipeline"]
+}
+```
+
 #### 4. Install Skill Manually (Optional)
 
 If not using the plugin:

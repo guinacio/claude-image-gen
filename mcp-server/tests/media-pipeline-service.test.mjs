@@ -500,3 +500,33 @@ test("createAsset rejects an output path outside the output directory before cal
     removeDirectory(outputDirectory);
   }
 });
+
+test("createAsset reports an explicit size instead of the aspect ratio it replaced", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const service = createService(
+      outputDirectory,
+      { OPENAI_API_KEY: "openai-key" },
+      {
+        clients: { openai: openaiClient },
+        fetchOpenAIModels: async () => ["gpt-image-2"],
+      }
+    );
+
+    const response = await service.createAsset({
+      prompt: "a friendly robot",
+      model: "gpt-image-2",
+      aspectRatio: "1:1",
+      size: "1536x864",
+    });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(response.size, "1536x864");
+    assert.equal(response.aspectRatio, undefined);
+    assert.equal(openaiClient.calls[0].size, "1536x864");
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});

@@ -40,7 +40,7 @@
         "OPENAI_DEFAULT_MODEL": "${user_config.OPENAI_DEFAULT_MODEL}",
         "IMAGE_PROVIDER": "${user_config.IMAGE_PROVIDER}",
         "IMAGE_OUTPUT_DIR": "${user_config.IMAGE_OUTPUT_DIR}",
-        "GEMINI_REQUEST_TIMEOUT_MS": "${user_config.GEMINI_REQUEST_TIMEOUT_MS}",
+        "REQUEST_TIMEOUT_MS": "${user_config.GEMINI_REQUEST_TIMEOUT_MS}",
         "MEDIA_PIPELINE_LOG_LEVEL": "${user_config.MEDIA_PIPELINE_LOG_LEVEL}"
       }
     }

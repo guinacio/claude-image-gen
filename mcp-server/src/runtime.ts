@@ -139,7 +139,11 @@ export function createRuntimeConfig(
       openaiApiKey
     ),
     outputDirectory: resolveOutputDirectory(env.IMAGE_OUTPUT_DIR),
-    requestTimeoutMs: parseRequestTimeoutMs(env.GEMINI_REQUEST_TIMEOUT_MS),
+    // REQUEST_TIMEOUT_MS applies to both providers; the older
+    // GEMINI_REQUEST_TIMEOUT_MS name is still read when it is unset.
+    requestTimeoutMs: parseRequestTimeoutMs(
+      env.REQUEST_TIMEOUT_MS?.trim() || env.GEMINI_REQUEST_TIMEOUT_MS
+    ),
     logLevel: parseLogLevel(env.MEDIA_PIPELINE_LOG_LEVEL),
   };
 }

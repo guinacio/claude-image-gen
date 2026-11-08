@@ -21,11 +21,17 @@ Options:
   -p, --prompt <text>        Image description (required)
   -o, --output <path>        Output file path (optional, auto-generated if not provided)
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
-  -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
+  -m, --model <model>        Model to use (gpt-image* → OpenAI, others → Gemini; dall-e* was shut down 2026-05-12)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
       --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
   -b, --background <mode>    auto, transparent or opaque (OpenAI only)
-  -f, --output-format <fmt>  png, jpeg or webp (OpenAI only)
+  -f, --output-format <fmt>  png, jpeg, webp, gif (animated) or svg (OpenAI only)
+      --complexity <level>   low, medium or high planning effort (OpenAI only)
+      --frame-count <n>      GIF frames, 2-16 (requires --output-format gif)
+      --frame-duration-ms <ms>  Delay per GIF frame, 20-2000 ms (requires --output-format gif)
+      --size <WxH|auto>      Exact OpenAI size, overriding --aspect-ratio (e.g. 720x720 for a 16-frame GIF)
+      --svg-model <model>   Model that authors the SVG (requires --output-format svg and SVG model selection)
+      --svg-reasoning-effort <level>  none, minimal, low, medium, high, xhigh or max (requires --svg-model)
   -d, --output-dir <dir>     Output directory (default: current directory)
   -t, --timeout-ms <ms>      Request timeout in milliseconds (both providers)
   -l, --log-level <level>    Logging level: error, warn, info, debug
@@ -37,7 +43,8 @@ Environment:
   GEMINI_DEFAULT_MODEL       Preferred default model (optional)
   OPENAI_DEFAULT_MODEL       Preferred default OpenAI model (optional, default gpt-image-2)
   IMAGE_PROVIDER             gemini or openai — provider used when --model is omitted (optional)
-  GEMINI_REQUEST_TIMEOUT_MS  Request timeout in milliseconds (optional)
+  REQUEST_TIMEOUT_MS         Request timeout in milliseconds, both providers (optional;
+                             GEMINI_REQUEST_TIMEOUT_MS is still read when unset)
   IMAGE_OUTPUT_DIR           Default output directory (overridden by --output-dir)
   MEDIA_PIPELINE_LOG_LEVEL   Logging level for stderr diagnostics (optional)
 
@@ -46,7 +53,13 @@ Examples:
   node build/cli.bundle.js --prompt "Hero image for tech startup" --aspect-ratio "16:9"
   node build/cli.bundle.js -p "Product photo" --model gpt-image-2 -o "./product.png"
   node build/cli.bundle.js -p "Logo variant" -r "./ref1.png,./ref2.png" -r "./ref3.png"
+  node build/cli.bundle.js -p "A lantern swaying, looping back to the start" --model gpt-image-2.6-sunburst -f gif --frame-count 12
 `);
+}
+
+/** Converts an optional numeric flag; NaN is left for schema validation to reject. */
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  return value === undefined ? undefined : Number(value);
 }
 
 async function main(): Promise<void> {
@@ -61,6 +74,12 @@ async function main(): Promise<void> {
         mask: { type: "string" },
         background: { type: "string", short: "b" },
         "output-format": { type: "string", short: "f" },
+        complexity: { type: "string" },
+        "frame-count": { type: "string" },
+        "frame-duration-ms": { type: "string" },
+        size: { type: "string" },
+        "svg-model": { type: "string" },
+        "svg-reasoning-effort": { type: "string" },
         "output-dir": { type: "string", short: "d" },
         "timeout-ms": { type: "string", short: "t" },
         "log-level": { type: "string", short: "l" },
@@ -90,6 +109,14 @@ async function main(): Promise<void> {
       mask: values.mask,
       background: values.background,
       outputFormat: values["output-format"],
+      complexity: values.complexity,
+      frameCount: parseOptionalNumber(values["frame-count"] as string | undefined),
+      frameDurationMs: parseOptionalNumber(
+        values["frame-duration-ms"] as string | undefined
+      ),
+      svgModel: values["svg-model"],
+      svgReasoningEffort: values["svg-reasoning-effort"],
+      size: values.size,
     });
 
     if (!parsedArgs.success) {
@@ -107,9 +134,9 @@ async function main(): Promise<void> {
         (values["output-dir"] as string | undefined) ??
         process.env.IMAGE_OUTPUT_DIR ??
         process.cwd(),
-      GEMINI_REQUEST_TIMEOUT_MS:
+      REQUEST_TIMEOUT_MS:
         (values["timeout-ms"] as string | undefined) ||
-        process.env.GEMINI_REQUEST_TIMEOUT_MS,
+        process.env.REQUEST_TIMEOUT_MS,
       MEDIA_PIPELINE_LOG_LEVEL:
         (values["log-level"] as string | undefined) ||
         process.env.MEDIA_PIPELINE_LOG_LEVEL,

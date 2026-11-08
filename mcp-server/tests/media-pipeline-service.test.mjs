@@ -176,6 +176,37 @@ test("createAsset merges both providers into the available model list", async ()
   }
 });
 
+test("createAsset rejects a shut-down DALL-E model before calling a provider", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const service = createService(
+      outputDirectory,
+      { OPENAI_API_KEY: "openai-key" },
+      {
+        clients: { openai: openaiClient },
+        fetchOpenAIModels: async () => ["gpt-image-2", "dall-e-3"],
+        fetchGeminiModels: async () => {
+          throw new Error("Gemini discovery must not run without a key");
+        },
+      }
+    );
+
+    const response = await service.createAsset({
+      prompt: "a friendly robot",
+      model: "dall-e-3",
+    });
+
+    assert.equal(response.success, false);
+    assert.equal(response.errorCode, "INVALID_MODEL");
+    assert.match(response.error, /2026-05-12/);
+    assert.equal(openaiClient.calls.length, 0);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
 test("createAsset reports PROVIDER_NOT_CONFIGURED when the OpenAI key is missing", async () => {
   const outputDirectory = createTempDirectory();
   const geminiClient = createFakeClient();
@@ -496,6 +527,36 @@ test("createAsset rejects an output path outside the output directory before cal
     assert.equal(response.errorCode, "OUTPUT_PATH_NOT_ALLOWED");
     assert.equal(openaiClient.calls.length, 0);
     assert.equal(fs.existsSync(outsidePath), false);
+  } finally {
+    removeDirectory(outputDirectory);
+  }
+});
+
+test("createAsset reports an explicit size instead of the aspect ratio it replaced", async () => {
+  const outputDirectory = createTempDirectory();
+  const openaiClient = createFakeClient();
+
+  try {
+    const service = createService(
+      outputDirectory,
+      { OPENAI_API_KEY: "openai-key" },
+      {
+        clients: { openai: openaiClient },
+        fetchOpenAIModels: async () => ["gpt-image-2"],
+      }
+    );
+
+    const response = await service.createAsset({
+      prompt: "a friendly robot",
+      model: "gpt-image-2",
+      aspectRatio: "1:1",
+      size: "1536x864",
+    });
+
+    assert.equal(response.success, true, response.error);
+    assert.equal(response.size, "1536x864");
+    assert.equal(response.aspectRatio, undefined);
+    assert.equal(openaiClient.calls[0].size, "1536x864");
   } finally {
     removeDirectory(outputDirectory);
   }

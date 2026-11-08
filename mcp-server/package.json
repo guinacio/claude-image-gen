@@ -19,14 +19,14 @@
     "smoke:test": "node scripts/smoke-test.mjs",
     "sync:version": "node scripts/sync-version.mjs",
     "check:version": "node scripts/sync-version.mjs --check",
-    "version": "node scripts/sync-version.mjs && git add manifest.json package-lock.json ../.claude-plugin/plugin.json ../.claude-plugin/marketplace.json",
+    "version": "node scripts/sync-version.mjs && git add manifest.json package-lock.json src/index.ts ../.claude-plugin/plugin.json ../.claude-plugin/marketplace.json",
     "pack:mcpb": "npm run check:version && npm run bundle && npm run smoke:test && node scripts/pack-contents.mjs --normalize && mcpb pack . media-pipeline.mcpb && node scripts/pack-contents.mjs",
     "dev": "tsc --watch"
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "openai": "^7.3.0",
+    "openai": "^7.53.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

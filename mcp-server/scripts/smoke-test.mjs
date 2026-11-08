@@ -15,7 +15,7 @@ const transport = new StdioClientTransport({
   env: {
     ...process.env,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY || "smoke-test-api-key",
-    GEMINI_REQUEST_TIMEOUT_MS: process.env.GEMINI_REQUEST_TIMEOUT_MS || "2000",
+    REQUEST_TIMEOUT_MS: process.env.REQUEST_TIMEOUT_MS || "2000",
     IMAGE_OUTPUT_DIR:
       process.env.IMAGE_OUTPUT_DIR || path.join(rootDir, "generated-images-smoke"),
     MEDIA_PIPELINE_LOG_LEVEL: process.env.MEDIA_PIPELINE_LOG_LEVEL || "error",

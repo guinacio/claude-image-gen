@@ -20,8 +20,9 @@ const SOURCE_LABEL = "mcp-server/package.json";
 const SOURCE_FILE = path.join(serverDirectory, "package.json");
 
 /**
- * Each target names the file, how to read every version it holds, and a pattern
- * matching exactly those version values in the raw text. `occurrences` states
+ * Each target names the file, how to read every version it holds (from parsed
+ * JSON, or from the raw text when `text` is set), and a pattern matching
+ * exactly those version values in the raw text. `occurrences` states
  * how many matches the pattern must find, so a structural change to a file is
  * caught rather than silently under-applied.
  */
@@ -58,10 +59,24 @@ const TARGETS = [
     pattern: /^(      "version":\s*")[^"]*(")/gm,
     occurrences: 1,
   },
+  {
+    label: "mcp-server/src/index.ts",
+    filePath: path.join(serverDirectory, "src", "index.ts"),
+    // The version the server announces in its MCP handshake. It lives in code,
+    // so it is read from the raw text rather than parsed as JSON.
+    text: true,
+    read: (raw) =>
+      [...raw.matchAll(/name: "media-pipeline",\s*\n\s*version: "([^"]*)"/g)].map(
+        (match) => match[1]
+      ),
+    pattern: /(name: "media-pipeline",\s*\n\s*version: ")[^"]*(")/g,
+    occurrences: 1,
+  },
 ];
 
 function readVersions(target) {
-  return target.read(JSON.parse(fs.readFileSync(target.filePath, "utf8")));
+  const raw = fs.readFileSync(target.filePath, "utf8");
+  return target.read(target.text ? raw : JSON.parse(raw));
 }
 
 /**

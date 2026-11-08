@@ -4,15 +4,22 @@ import {
   getApiKeyEnvVarForProvider,
   getDefaultModelForProvider,
   resolveProviderForModel,
+  retiredOpenAIModelError,
 } from "../build/provider.js";
 import { createRuntimeConfig, parseImageProvider } from "../build/runtime.js";
 
 test("resolveProviderForModel routes OpenAI model families to openai", () => {
   assert.equal(resolveProviderForModel("gpt-image-2"), "openai");
   assert.equal(resolveProviderForModel("gpt-image-1-mini"), "openai");
-  assert.equal(resolveProviderForModel("dall-e-3"), "openai");
+  assert.equal(resolveProviderForModel("gpt-image-2.6-sunburst"), "openai");
   assert.equal(resolveProviderForModel("  GPT-Image-2  "), "openai");
-  assert.equal(resolveProviderForModel("DALL-E-2"), "openai");
+});
+
+test("retiredOpenAIModelError names the DALL-E shutdown and leaves gpt-image alone", () => {
+  assert.match(retiredOpenAIModelError("dall-e-3"), /2026-05-12/);
+  assert.match(retiredOpenAIModelError("  DALL-E-2  "), /dall-e-2/i);
+  assert.equal(retiredOpenAIModelError("gpt-image-2"), undefined);
+  assert.equal(resolveProviderForModel("dall-e-3"), "gemini");
 });
 
 test("resolveProviderForModel defaults everything else to gemini", () => {
@@ -72,4 +79,19 @@ test("createRuntimeConfig falls back to built-in defaults", () => {
   assert.equal(config.openaiDefaultModel, "gpt-image-2");
   assert.equal(config.geminiDefaultModel, "gemini-3-pro-image");
   assert.equal(config.defaultProvider, "gemini");
+});
+
+test("createRuntimeConfig reads REQUEST_TIMEOUT_MS before the older Gemini-named variable", () => {
+  const cases = [
+    [{ REQUEST_TIMEOUT_MS: "300000" }, 300000],
+    [{ GEMINI_REQUEST_TIMEOUT_MS: "120000" }, 120000],
+    [{ REQUEST_TIMEOUT_MS: "300000", GEMINI_REQUEST_TIMEOUT_MS: "120000" }, 300000],
+    [{ REQUEST_TIMEOUT_MS: "  ", GEMINI_REQUEST_TIMEOUT_MS: "120000" }, 120000],
+    [{}, 60000],
+  ];
+
+  for (const [env, expected] of cases) {
+    const config = createRuntimeConfig({ GEMINI_API_KEY: "gemini-key", ...env });
+    assert.equal(config.requestTimeoutMs, expected, JSON.stringify(env));
+  }
 });

@@ -13,6 +13,7 @@ export class ImageStorage {
     "image/jpeg": [".jpg", ".jpeg"],
     "image/webp": [".webp"],
     "image/gif": [".gif"],
+    "image/svg+xml": [".svg"],
   };
 
   constructor(outputDir: string) {

@@ -46,8 +46,49 @@ export const SVG_REASONING_EFFORTS = [
 
 export type SvgReasoningEffort = (typeof SVG_REASONING_EFFORTS)[number];
 
-/** "auto" or WIDTHxHEIGHT; the API checks the model-specific limits. */
+/**
+ * Shape advertised on the tool schema. `explainInvalidOpenAISize` is the
+ * check the handler actually enforces.
+ */
 export const OPENAI_SIZE_PATTERN = /^(auto|[1-9]\d{1,4}x[1-9]\d{1,4})$/;
+
+/** Longest edge OpenAI documents for a custom GPT Image size. */
+export const OPENAI_MAX_EDGE_PX = 3840;
+
+/**
+ * Returns a reason to refuse `size` locally, or undefined when it matches the
+ * limits OpenAI documents for gpt-image-2 and later: `auto`, or WIDTHxHEIGHT
+ * with both sides multiples of 16, neither edge above 3840, and a ratio
+ * between 1:3 and 3:1. The GIF sheet budget stays with the API, because it
+ * depends on the frame count.
+ */
+export function explainInvalidOpenAISize(size: string): string | undefined {
+  if (size === "auto") {
+    return undefined;
+  }
+
+  const match = /^([1-9]\d{1,4})x([1-9]\d{1,4})$/.exec(size);
+  if (!match) {
+    return 'size must be "auto" or WIDTHxHEIGHT, such as 720x720';
+  }
+
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (width % 16 !== 0 || height % 16 !== 0) {
+    return "size width and height must both be multiples of 16";
+  }
+
+  if (width > OPENAI_MAX_EDGE_PX || height > OPENAI_MAX_EDGE_PX) {
+    return `size edges must be at most ${OPENAI_MAX_EDGE_PX} pixels`;
+  }
+
+  // Cross-multiply so a ratio of exactly 1:3 or 3:1 is accepted.
+  if (width * 3 < height || height * 3 < width) {
+    return "size aspect ratio must be between 1:3 and 3:1";
+  }
+
+  return undefined;
+}
 
 /** Frame limits for animated GIF output, as documented for the OpenAI Image API. */
 export const GIF_FRAME_COUNT_RANGE = { min: 2, max: 16 } as const;

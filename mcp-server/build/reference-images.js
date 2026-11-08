@@ -9,8 +9,9 @@ const REFERENCE_IMAGE_MIME_TYPES = {
 };
 export const SUPPORTED_REFERENCE_IMAGE_FORMATS = "PNG, JPEG, or WebP";
 export const MAX_REFERENCE_IMAGE_BYTES = 20 * 1024 * 1024;
-// OpenAI caps the mask at 4MB unconditionally, unlike the image itself, whose
-// limit depends on the model (50MB on the GPT image models, 4MB on dall-e-2).
+// OpenAI caps the mask at 4MB unconditionally. GPT image models allow a larger
+// source image (50MB). dall-e-2, which shared the 4MB image cap, shut down on
+// 2026-05-12 and is no longer offered.
 // https://developers.openai.com/api/reference/python/resources/images/methods/edit
 export const MAX_MASK_BYTES = 4 * 1024 * 1024;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

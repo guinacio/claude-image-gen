@@ -4,15 +4,22 @@ import {
   getApiKeyEnvVarForProvider,
   getDefaultModelForProvider,
   resolveProviderForModel,
+  retiredOpenAIModelError,
 } from "../build/provider.js";
 import { createRuntimeConfig, parseImageProvider } from "../build/runtime.js";
 
 test("resolveProviderForModel routes OpenAI model families to openai", () => {
   assert.equal(resolveProviderForModel("gpt-image-2"), "openai");
   assert.equal(resolveProviderForModel("gpt-image-1-mini"), "openai");
-  assert.equal(resolveProviderForModel("dall-e-3"), "openai");
+  assert.equal(resolveProviderForModel("gpt-image-2.6-sunburst"), "openai");
   assert.equal(resolveProviderForModel("  GPT-Image-2  "), "openai");
-  assert.equal(resolveProviderForModel("DALL-E-2"), "openai");
+});
+
+test("retiredOpenAIModelError names the DALL-E shutdown and leaves gpt-image alone", () => {
+  assert.match(retiredOpenAIModelError("dall-e-3"), /2026-05-12/);
+  assert.match(retiredOpenAIModelError("  DALL-E-2  "), /dall-e-2/i);
+  assert.equal(retiredOpenAIModelError("gpt-image-2"), undefined);
+  assert.equal(resolveProviderForModel("dall-e-3"), "gemini");
 });
 
 test("resolveProviderForModel defaults everything else to gemini", () => {

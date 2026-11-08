@@ -1,4 +1,4 @@
-import type { AspectRatio, GenerateImageInput, GenerateImageResult, ImageBackground, ImageOutputFormat, ImageProviderClient } from "./types.js";
+import type { AspectRatio, GenerateImageInput, GenerateImageResult, ImageBackground, ImageOutputFormat, ImageProviderClient, SvgReasoningEffort } from "./types.js";
 export type OpenAIImageSize = "1024x1024" | "1536x1024" | "1024x1536";
 export interface OpenAIConfig {
     apiKey: string;
@@ -27,6 +27,26 @@ export interface ResolvedOutputOptions {
  * asking for transparency is enough to actually get it.
  */
 export declare function resolveOutputOptions(background: ImageBackground | undefined, outputFormat: ImageOutputFormat | undefined): ResolvedOutputOptions;
+/**
+ * Rejects option combinations that the OpenAI Image API documents as invalid,
+ * so they fail locally with a clear reason instead of as an API error:
+ * - frameCount and frameDurationMs only exist for GIF output;
+ * - SVG output is generation-only (the edit endpoint has no SVG format), and
+ *   referenceImages always go to the edit endpoint;
+ * - GIF output does not support masks;
+ * - svgModel and svgReasoningEffort only exist for SVG output, and the API's
+ *   svg object requires a model, so an effort alone has nowhere to go.
+ * Returns undefined when the combination is valid.
+ */
+export declare function checkFormatSpecificOptions(input: {
+    outputFormat?: ImageOutputFormat;
+    frameCount?: number;
+    frameDurationMs?: number;
+    svgModel?: string;
+    svgReasoningEffort?: SvgReasoningEffort;
+    hasReferenceImages: boolean;
+    hasMask: boolean;
+}): string | undefined;
 export interface ObservedRejection {
     /** Model ids this rejection was actually observed on. */
     models: RegExp;

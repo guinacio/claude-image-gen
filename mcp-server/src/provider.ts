@@ -1,6 +1,22 @@
 import type { ImageProvider, RuntimeConfig } from "./types.js";
 
-const OPENAI_MODEL_PREFIXES = ["gpt-image", "dall-e"] as const;
+const OPENAI_MODEL_PREFIXES = ["gpt-image"] as const;
+
+/**
+ * DALL·E snapshots shut down on 2026-05-12. They stay out of the prefix list
+ * so a retired name cannot be sent to OpenAI or misread as a Gemini model
+ * choice. Callers refuse them with `retiredOpenAIModelError` first.
+ */
+const RETIRED_OPENAI_MODEL_PREFIXES = ["dall-e"] as const;
+
+export function retiredOpenAIModelError(model: string): string | undefined {
+  const normalized = model.trim().toLowerCase();
+  if (!RETIRED_OPENAI_MODEL_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
+    return undefined;
+  }
+
+  return `Model ${model.trim()} was shut down by OpenAI on 2026-05-12. Use a gpt-image model such as gpt-image-2.`;
+}
 
 export function resolveProviderForModel(model: string): ImageProvider {
   const normalized = model.trim().toLowerCase();

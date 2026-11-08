@@ -23,7 +23,7 @@ export interface CreateAssetToolDependencies {
 export declare const CREATE_ASSET_TOOL_NAME = "create_asset";
 export declare const CREATE_ASSET_TOOL_CONFIG: {
     readonly title: "Create Asset";
-    readonly description: "Generate an image with Google Gemini or OpenAI (gpt-image-2), save it within the configured output directory, and return the saved file path plus structured metadata. The model name selects the provider: gpt-image*/dall-e* models route to OpenAI, all others to Gemini.";
+    readonly description: "Generate an image with Google Gemini or OpenAI, save it within the configured output directory, and return the saved file path plus structured metadata. Model names starting with gpt-image route to OpenAI; every other name routes to Gemini. dall-e models were shut down on 2026-05-12 and are rejected. On gpt-image-2.6, outputFormat also accepts animated gif and svg.";
     readonly inputSchema: import("@modelcontextprotocol/server").StandardSchemaWithJSON<unknown, unknown>;
     readonly outputSchema: import("@modelcontextprotocol/server").StandardSchemaWithJSON<CreateAssetResponse, CreateAssetResponse>;
     readonly annotations: {

@@ -3,6 +3,7 @@ import {
   ASPECT_RATIOS,
   GIF_FRAME_COUNT_RANGE,
   GIF_FRAME_DURATION_MS_RANGE,
+  explainInvalidOpenAISize,
   IMAGE_BACKGROUNDS,
   IMAGE_COMPLEXITIES,
   IMAGE_OUTPUT_FORMATS,
@@ -91,7 +92,12 @@ export const createAssetArgsSchema = z
     size: z
       .string()
       .trim()
-      .regex(OPENAI_SIZE_PATTERN, 'size must be "auto" or WIDTHxHEIGHT, such as 720x720')
+      .superRefine((value, context) => {
+        const message = explainInvalidOpenAISize(value);
+        if (message) {
+          context.addIssue({ code: "custom", message });
+        }
+      })
       .optional()
       .describe("Exact output size, overriding aspectRatio. OpenAI models only"),
     model: z
@@ -101,7 +107,7 @@ export const createAssetArgsSchema = z
       .max(256, "model must be at most 256 characters long")
       .optional()
       .describe(
-        "Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)"
+        "Model to use for generation (gpt-image* routes to OpenAI, others to Gemini). dall-e models were shut down on 2026-05-12 and are rejected."
       ),
   });
 
@@ -157,7 +163,7 @@ export const createAssetInputSchema = {
       type: "string",
       enum: [...IMAGE_OUTPUT_FORMATS],
       description:
-        "Encoding of the returned image. Defaults to the provider default. jpeg, gif and svg cannot be combined with a transparent background (OpenAI documents transparency as png or webp only). gif returns an animated GIF, tuned with frameCount and frameDurationMs; describe the motion and how it loops in the prompt. GIF output does not support masks. svg returns a vector image and is generation-only, so it cannot be combined with referenceImages; it may need svgModel, and one verified run took about 2.5 minutes, well past the 60 s default timeout. OpenAI documents gif and svg for the gpt-image-2.6 models (gpt-image-2.6-flare, gpt-image-2.6-sunburst), and GIF may require preview access. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+        "Encoding of the returned image. Defaults to the provider default. jpeg, gif and svg cannot be combined with a transparent background (OpenAI documents transparency as png or webp only). gif returns an animated GIF, tuned with frameCount and frameDurationMs; describe the motion and how it loops in the prompt. GIF output does not support masks, and reference images for a GIF go to the edit endpoint. svg returns a vector image and is generation-only, so it cannot be combined with referenceImages; it may need svgModel. One verified SVG run took about 2.5 minutes, past the 60 s default timeout and under Claude Desktop's 240 s tool-call limit, so raise REQUEST_TIMEOUT_MS (the CLI flag is --timeout-ms) to 180000 for SVG. OpenAI documents gif and svg for gpt-image-2.6-flare and gpt-image-2.6-sunburst, and GIF may require preview access. Verified on 2026-11-07 with gpt-image-2.6-sunburst. OpenAI models only — Gemini models reject it. If a model refuses a format, the API's own reason is returned.",
     },
     complexity: {
       type: "string",
@@ -196,12 +202,12 @@ export const createAssetInputSchema = {
       type: "string",
       pattern: OPENAI_SIZE_PATTERN.source,
       description:
-        "Exact output size as WIDTHxHEIGHT (for example 1536x864) or auto, overriding the aspectRatio mapping to the three standard sizes. OpenAI documents arbitrary sizes for gpt-image-2 and later: both sides divisible by 16, aspect ratio between 1:3 and 3:1, at most 3840x2160. For GIF, the frames are laid out on one sheet that must fit within 3840 px on its longest edge and within the pixel budget of 3840x2160. Verified on 2026-11-07 with gpt-image-2.6-sunburst: 16 frames were refused at 1024x1024 (4096x4096 sheet) and at 960x960 (3840x3840 sheet, over the pixel budget) and worked at 720x720. OpenAI models only — Gemini models reject it.",
+        "Exact output size as WIDTHxHEIGHT (for example 1536x864) or auto, overriding the aspectRatio mapping to the three standard sizes. Refused locally unless both sides are multiples of 16, neither edge exceeds 3840, and the ratio is between 1:3 and 3:1. For GIF, the frames share one sheet that must also fit within 3840 px on its longest edge and within the pixel budget of 3840x2160; that sheet limit is left to the API because it depends on the frame count. Verified on 2026-11-07 with gpt-image-2.6-sunburst: 16 frames were refused at 1024x1024 (4096x4096 sheet) and at 960x960 (3840x3840 sheet, over the pixel budget) and worked at 720x720. OpenAI models only — Gemini models reject it.",
     },
     model: {
       type: "string",
       description:
-        "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
+        "Optional model name for image generation. gpt-image* models route to OpenAI; all other models route to Gemini. dall-e-2 and dall-e-3 were shut down on 2026-05-12 and are rejected. If omitted, the configured default provider's default model is used when available.",
       minLength: 1,
       maxLength: 256,
     },

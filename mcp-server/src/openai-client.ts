@@ -14,7 +14,7 @@ import type {
   SvgReasoningEffort,
 } from "./types.js";
 
-const OPENAI_IMAGE_MODEL_PATTERN = /^(gpt-image|dall-e)/;
+const OPENAI_IMAGE_MODEL_PATTERN = /^gpt-image/;
 
 export type OpenAIImageSize = "1024x1024" | "1536x1024" | "1024x1536";
 
@@ -173,8 +173,9 @@ export interface ObservedRejection {
  * Verified as of 2026-08:
  *   gpt-image-2  background: "transparent"  -> 400, entry below
  *   gpt-image-2  no background/outputFormat -> works, on both generate and edit
- * Not verified on any model: mask, outputFormat, background auto/opaque, and
- * every option on gpt-image-1 and dall-e models.
+ * Not verified on any model: mask, outputFormat other than the gif and svg
+ * cases covered by their own tests, and background auto/opaque.
+ * dall-e models shut down on 2026-05-12 and are rejected before routing.
  */
 const OBSERVED_MODEL_REJECTIONS: readonly ObservedRejection[] = [
   {

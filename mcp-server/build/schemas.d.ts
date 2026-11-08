@@ -22,7 +22,27 @@ export declare const createAssetArgsSchema: z.ZodObject<{
         png: "png";
         jpeg: "jpeg";
         webp: "webp";
+        gif: "gif";
+        svg: "svg";
     }>>;
+    complexity: z.ZodOptional<z.ZodEnum<{
+        low: "low";
+        medium: "medium";
+        high: "high";
+    }>>;
+    frameCount: z.ZodOptional<z.ZodNumber>;
+    frameDurationMs: z.ZodOptional<z.ZodNumber>;
+    svgModel: z.ZodOptional<z.ZodString>;
+    svgReasoningEffort: z.ZodOptional<z.ZodEnum<{
+        low: "low";
+        medium: "medium";
+        high: "high";
+        none: "none";
+        minimal: "minimal";
+        xhigh: "xhigh";
+        max: "max";
+    }>>;
+    size: z.ZodOptional<z.ZodString>;
     model: z.ZodOptional<z.ZodString>;
 }, z.core.$strict>;
 export declare const createAssetInputSchema: {
@@ -69,12 +89,45 @@ export declare const createAssetInputSchema: {
         };
         readonly outputFormat: {
             readonly type: "string";
-            readonly enum: readonly ["png", "jpeg", "webp"];
-            readonly description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.";
+            readonly enum: readonly ["png", "jpeg", "webp", "gif", "svg"];
+            readonly description: "Encoding of the returned image. Defaults to the provider default. jpeg, gif and svg cannot be combined with a transparent background (OpenAI documents transparency as png or webp only). gif returns an animated GIF, tuned with frameCount and frameDurationMs; describe the motion and how it loops in the prompt. GIF output does not support masks, and reference images for a GIF go to the edit endpoint. svg returns a vector image and is generation-only, so it cannot be combined with referenceImages; it may need svgModel. One verified SVG run took about 2.5 minutes, past the 60 s default timeout and under Claude Desktop's 240 s tool-call limit, so raise REQUEST_TIMEOUT_MS (the CLI flag is --timeout-ms) to 180000 for SVG. OpenAI documents gif and svg for gpt-image-2.6-flare and gpt-image-2.6-sunburst, and GIF may require preview access. Verified on 2026-11-07 with gpt-image-2.6-sunburst. OpenAI models only — Gemini models reject it. If a model refuses a format, the API's own reason is returned.";
+        };
+        readonly complexity: {
+            readonly type: "string";
+            readonly enum: readonly ["low", "medium", "high"];
+            readonly description: "How much computation the model spends planning the image, independently of rendering quality. The gpt-image-2.6 models default to high; higher values can add latency and unwanted changes in edits. OpenAI documents no separate fee for it. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.";
+        };
+        readonly frameCount: {
+            readonly type: "integer";
+            readonly minimum: 2;
+            readonly maximum: 16;
+            readonly description: "Number of frames in an animated GIF (OpenAI default: 9). Only valid with outputFormat gif. OpenAI models only — Gemini models reject it.";
+        };
+        readonly frameDurationMs: {
+            readonly type: "integer";
+            readonly minimum: 20;
+            readonly maximum: 2000;
+            readonly description: "Delay per animated GIF frame in milliseconds, rounded by OpenAI to the nearest 10 ms (OpenAI default: 200). Only valid with outputFormat gif. OpenAI models only — Gemini models reject it.";
+        };
+        readonly svgModel: {
+            readonly type: "string";
+            readonly description: "Model that authors the SVG, such as a GPT text model; the image model in `model` only creates the reference image it works from. Only valid with outputFormat svg. On accounts with SVG model selection the API requires it: verified on 2026-11-07, gpt-image-2.6-sunburst refused svg output without it (400 \"SVG generation requires 'svg.model'\") and produced the SVG with gpt-5.5. OpenAI documents that accounts without SVG model selection must leave it out. OpenAI models only — Gemini models reject it.";
+            readonly minLength: 1;
+            readonly maxLength: 256;
+        };
+        readonly svgReasoningEffort: {
+            readonly type: "string";
+            readonly enum: readonly ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
+            readonly description: "Reasoning effort of svgModel, independent of complexity. Requires svgModel; omitted, the author model's default is used. Which efforts work depends on svgModel. OpenAI models only — Gemini models reject it.";
+        };
+        readonly size: {
+            readonly type: "string";
+            readonly pattern: string;
+            readonly description: "Exact output size as WIDTHxHEIGHT (for example 1536x864) or auto, overriding the aspectRatio mapping to the three standard sizes. Refused locally unless both sides are multiples of 16, neither edge exceeds 3840, and the ratio is between 1:3 and 3:1. For GIF, the frames share one sheet that must also fit within 3840 px on its longest edge and within the pixel budget of 3840x2160; that sheet limit is left to the API because it depends on the frame count. Verified on 2026-11-07 with gpt-image-2.6-sunburst: 16 frames were refused at 1024x1024 (4096x4096 sheet) and at 960x960 (3840x3840 sheet, over the pixel budget) and worked at 720x720. OpenAI models only — Gemini models reject it.";
         };
         readonly model: {
             readonly type: "string";
-            readonly description: "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.";
+            readonly description: "Optional model name for image generation. gpt-image* models route to OpenAI; all other models route to Gemini. dall-e-2 and dall-e-3 were shut down on 2026-05-12 and are rejected. If omitted, the configured default provider's default model is used when available.";
             readonly minLength: 1;
             readonly maxLength: 256;
         };
@@ -108,7 +161,11 @@ export declare const createAssetOutputSchema: {
         readonly aspectRatio: {
             readonly type: "string";
             readonly enum: readonly ["1:1", "2:3", "3:2", "3:4", "4:3", "16:9", "9:16"];
-            readonly description: "Aspect ratio used for the image.";
+            readonly description: "Aspect ratio used for the image. Omitted when the request named an exact size.";
+        };
+        readonly size: {
+            readonly type: "string";
+            readonly description: "Exact size sent to the provider, when the request named one instead of relying on aspectRatio.";
         };
         readonly model: {
             readonly type: "string";

@@ -130,13 +130,23 @@ test("createAssetArgsSchema rejects an empty svgModel and an unknown effort", ()
   }
 });
 
-test("createAssetArgsSchema accepts auto and WIDTHxHEIGHT sizes only", () => {
-  for (const size of ["auto", "960x960", "1536x864"]) {
+test("createAssetArgsSchema accepts auto and documented OpenAI sizes only", () => {
+  for (const size of ["auto", "720x720", "960x960", "1536x864", "3840x1280", "1280x3840"]) {
     const parsed = createAssetArgsSchema.safeParse({ ...basePrompt, size });
-    assert.ok(parsed.success, size);
+    assert.ok(parsed.success, parsed.error?.issues?.[0]?.message ?? size);
   }
 
-  for (const size of ["960", "960X960", "0x960", "big", "960x960x2"]) {
+  for (const size of [
+    "960",
+    "960X960",
+    "0x960",
+    "big",
+    "960x960x2",
+    "10x10",
+    "1000x1000",
+    "4000x1024",
+    "3840x1024",
+  ]) {
     const parsed = createAssetArgsSchema.safeParse({ ...basePrompt, size });
     assert.equal(parsed.success, false, size);
   }

@@ -21,7 +21,7 @@ Options:
   -p, --prompt <text>        Image description (required)
   -o, --output <path>        Output file path (optional, auto-generated if not provided)
   -a, --aspect-ratio <ratio> Aspect ratio: ${ASPECT_RATIOS.join(", ")} (default: 1:1)
-  -m, --model <model>        Model to use (gpt-image*/dall-e* → OpenAI, others → Gemini; validated dynamically)
+  -m, --model <model>        Model to use (gpt-image* → OpenAI, others → Gemini; dall-e* was shut down 2026-05-12)
   -r, --reference-images <paths>  Reference image paths (PNG/JPEG/WebP, repeatable or comma-separated, max 5)
       --mask <path>          PNG mask marking the region to repaint (OpenAI only, requires --reference-images)
   -b, --background <mode>    auto, transparent or opaque (OpenAI only)

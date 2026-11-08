@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ASPECT_RATIOS, IMAGE_BACKGROUNDS, IMAGE_OUTPUT_FORMATS, } from "./types.js";
+import { ASPECT_RATIOS, GIF_FRAME_COUNT_RANGE, GIF_FRAME_DURATION_MS_RANGE, explainInvalidOpenAISize, IMAGE_BACKGROUNDS, IMAGE_COMPLEXITIES, IMAGE_OUTPUT_FORMATS, OPENAI_SIZE_PATTERN, SVG_REASONING_EFFORTS, } from "./types.js";
 export const createAssetArgsSchema = z
     .strictObject({
     prompt: z
@@ -44,14 +44,54 @@ export const createAssetArgsSchema = z
     outputFormat: z
         .enum(IMAGE_OUTPUT_FORMATS)
         .optional()
-        .describe("Encoding of the returned image. OpenAI models only"),
+        .describe("Encoding of the returned image; gif is animated, svg is vector. OpenAI models only"),
+    complexity: z
+        .enum(IMAGE_COMPLEXITIES)
+        .optional()
+        .describe("How much planning the model spends on the image, separate from quality. OpenAI models only"),
+    frameCount: z
+        .number()
+        .int("frameCount must be a whole number")
+        .min(GIF_FRAME_COUNT_RANGE.min, `frameCount must be at least ${GIF_FRAME_COUNT_RANGE.min}`)
+        .max(GIF_FRAME_COUNT_RANGE.max, `frameCount must be at most ${GIF_FRAME_COUNT_RANGE.max}`)
+        .optional()
+        .describe("Number of frames in an animated GIF. Requires outputFormat gif"),
+    frameDurationMs: z
+        .number()
+        .int("frameDurationMs must be a whole number")
+        .min(GIF_FRAME_DURATION_MS_RANGE.min, `frameDurationMs must be at least ${GIF_FRAME_DURATION_MS_RANGE.min}`)
+        .max(GIF_FRAME_DURATION_MS_RANGE.max, `frameDurationMs must be at most ${GIF_FRAME_DURATION_MS_RANGE.max}`)
+        .optional()
+        .describe("Delay per animated GIF frame, in milliseconds. Requires outputFormat gif"),
+    svgModel: z
+        .string()
+        .trim()
+        .min(1, "svgModel cannot be empty")
+        .max(256, "svgModel must be at most 256 characters long")
+        .optional()
+        .describe("Model that authors the SVG. Requires outputFormat svg and SVG model selection on the account"),
+    svgReasoningEffort: z
+        .enum(SVG_REASONING_EFFORTS)
+        .optional()
+        .describe("Reasoning effort of svgModel. Requires svgModel"),
+    size: z
+        .string()
+        .trim()
+        .superRefine((value, context) => {
+        const message = explainInvalidOpenAISize(value);
+        if (message) {
+            context.addIssue({ code: "custom", message });
+        }
+    })
+        .optional()
+        .describe("Exact output size, overriding aspectRatio. OpenAI models only"),
     model: z
         .string()
         .trim()
         .min(1, "model cannot be empty")
         .max(256, "model must be at most 256 characters long")
         .optional()
-        .describe("Model to use for generation (gpt-image*/dall-e* route to OpenAI, others to Gemini)"),
+        .describe("Model to use for generation (gpt-image* routes to OpenAI, others to Gemini). dall-e models were shut down on 2026-05-12 and are rejected."),
 });
 export const createAssetInputSchema = {
     type: "object",
@@ -98,11 +138,44 @@ export const createAssetInputSchema = {
         outputFormat: {
             type: "string",
             enum: [...IMAGE_OUTPUT_FORMATS],
-            description: "Encoding of the returned image. Defaults to the provider default. jpeg cannot carry transparency. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+            description: "Encoding of the returned image. Defaults to the provider default. jpeg, gif and svg cannot be combined with a transparent background (OpenAI documents transparency as png or webp only). gif returns an animated GIF, tuned with frameCount and frameDurationMs; describe the motion and how it loops in the prompt. GIF output does not support masks, and reference images for a GIF go to the edit endpoint. svg returns a vector image and is generation-only, so it cannot be combined with referenceImages; it may need svgModel. One verified SVG run took about 2.5 minutes, past the 60 s default timeout and under Claude Desktop's 240 s tool-call limit, so raise REQUEST_TIMEOUT_MS (the CLI flag is --timeout-ms) to 180000 for SVG. OpenAI documents gif and svg for gpt-image-2.6-flare and gpt-image-2.6-sunburst, and GIF may require preview access. Verified on 2026-11-07 with gpt-image-2.6-sunburst. OpenAI models only — Gemini models reject it. If a model refuses a format, the API's own reason is returned.",
+        },
+        complexity: {
+            type: "string",
+            enum: [...IMAGE_COMPLEXITIES],
+            description: "How much computation the model spends planning the image, independently of rendering quality. The gpt-image-2.6 models default to high; higher values can add latency and unwanted changes in edits. OpenAI documents no separate fee for it. OpenAI models only — Gemini models reject it. Not verified against a live API on any model; if a model refuses it, the API's own reason is returned.",
+        },
+        frameCount: {
+            type: "integer",
+            minimum: GIF_FRAME_COUNT_RANGE.min,
+            maximum: GIF_FRAME_COUNT_RANGE.max,
+            description: "Number of frames in an animated GIF (OpenAI default: 9). Only valid with outputFormat gif. OpenAI models only — Gemini models reject it.",
+        },
+        frameDurationMs: {
+            type: "integer",
+            minimum: GIF_FRAME_DURATION_MS_RANGE.min,
+            maximum: GIF_FRAME_DURATION_MS_RANGE.max,
+            description: "Delay per animated GIF frame in milliseconds, rounded by OpenAI to the nearest 10 ms (OpenAI default: 200). Only valid with outputFormat gif. OpenAI models only — Gemini models reject it.",
+        },
+        svgModel: {
+            type: "string",
+            description: "Model that authors the SVG, such as a GPT text model; the image model in `model` only creates the reference image it works from. Only valid with outputFormat svg. On accounts with SVG model selection the API requires it: verified on 2026-11-07, gpt-image-2.6-sunburst refused svg output without it (400 \"SVG generation requires 'svg.model'\") and produced the SVG with gpt-5.5. OpenAI documents that accounts without SVG model selection must leave it out. OpenAI models only — Gemini models reject it.",
+            minLength: 1,
+            maxLength: 256,
+        },
+        svgReasoningEffort: {
+            type: "string",
+            enum: [...SVG_REASONING_EFFORTS],
+            description: "Reasoning effort of svgModel, independent of complexity. Requires svgModel; omitted, the author model's default is used. Which efforts work depends on svgModel. OpenAI models only — Gemini models reject it.",
+        },
+        size: {
+            type: "string",
+            pattern: OPENAI_SIZE_PATTERN.source,
+            description: "Exact output size as WIDTHxHEIGHT (for example 1536x864) or auto, overriding the aspectRatio mapping to the three standard sizes. Refused locally unless both sides are multiples of 16, neither edge exceeds 3840, and the ratio is between 1:3 and 3:1. For GIF, the frames share one sheet that must also fit within 3840 px on its longest edge and within the pixel budget of 3840x2160; that sheet limit is left to the API because it depends on the frame count. Verified on 2026-11-07 with gpt-image-2.6-sunburst: 16 frames were refused at 1024x1024 (4096x4096 sheet) and at 960x960 (3840x3840 sheet, over the pixel budget) and worked at 720x720. OpenAI models only — Gemini models reject it.",
         },
         model: {
             type: "string",
-            description: "Optional model name for image generation. gpt-image*/dall-e* models route to OpenAI; all other models route to Gemini. If omitted, the configured default provider's default model is used when available.",
+            description: "Optional model name for image generation. gpt-image* models route to OpenAI; all other models route to Gemini. dall-e-2 and dall-e-3 were shut down on 2026-05-12 and are rejected. If omitted, the configured default provider's default model is used when available.",
             minLength: 1,
             maxLength: 256,
         },
@@ -136,7 +209,11 @@ export const createAssetOutputSchema = {
         aspectRatio: {
             type: "string",
             enum: [...ASPECT_RATIOS],
-            description: "Aspect ratio used for the image.",
+            description: "Aspect ratio used for the image. Omitted when the request named an exact size.",
+        },
+        size: {
+            type: "string",
+            description: "Exact size sent to the provider, when the request named one instead of relying on aspectRatio.",
         },
         model: {
             type: "string",

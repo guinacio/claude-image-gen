@@ -11,6 +11,7 @@ import {
   getApiKeyEnvVarForProvider,
   getDefaultModelForProvider,
   resolveProviderForModel,
+  retiredOpenAIModelError,
 } from "./provider.js";
 import {
   formatErrorMessage,
@@ -230,6 +231,20 @@ export class MediaPipelineService {
       : { aspectRatio: request.aspectRatio || "1:1" };
     const modelContext = await this.getModelContext();
     const warnings = [...modelContext.warnings];
+
+    const retiredModel = request.model ? retiredOpenAIModelError(request.model) : undefined;
+    if (retiredModel) {
+      return {
+        success: false,
+        errorCode: "INVALID_MODEL",
+        error: retiredModel,
+        prompt: request.prompt,
+        ...shape,
+        model: request.model,
+        outputDirectory: this.imageStorage.getOutputDirectory(),
+        warnings,
+      };
+    }
 
     if (request.model && !modelContext.availableModels.includes(request.model)) {
       return {

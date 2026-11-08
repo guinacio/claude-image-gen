@@ -75,7 +75,7 @@
     "IMAGE_PROVIDER": {
       "type": "string",
       "title": "Default Provider",
-      "description": "Which provider (gemini or openai) to use when a request omits a model. Controls the default model's provider; explicit gpt-image*/dall-e* model names always route to OpenAI regardless of this setting.",
+      "description": "Which provider (gemini or openai) to use when a request omits a model. Controls the default model's provider; explicit gpt-image* model names always route to OpenAI regardless of this setting. dall-e models were shut down on 2026-05-12 and are rejected.",
       "default": "gemini"
     },
     "IMAGE_OUTPUT_DIR": {
@@ -86,10 +86,10 @@
     "GEMINI_REQUEST_TIMEOUT_MS": {
       "type": "number",
       "title": "Request Timeout (ms)",
-      "description": "Maximum time to wait for image generation requests (applies to both Gemini and OpenAI)",
+      "description": "Maximum time to wait for image generation, for both Gemini and OpenAI. Claude Desktop stops a tool call at 240 seconds, so this setting stops there too. SVG generation took about 2.5 minutes in testing; raise this above the 60 second default for that.",
       "default": 60000,
       "min": 1000,
-      "max": 300000
+      "max": 240000
     },
     "MEDIA_PIPELINE_LOG_LEVEL": {
       "type": "string",
@@ -101,7 +101,7 @@
   "tools": [
     {
       "name": "create_asset",
-      "description": "Generate an image with Google Gemini or OpenAI (gpt-image-2), save it locally, and return the output path plus structured metadata."
+      "description": "Generate an image with Google Gemini or OpenAI, save it locally, and return the output path plus structured metadata. gpt-image-2.6 can also return an animated GIF or an SVG."
     }
   ],
   "compatibility": {
